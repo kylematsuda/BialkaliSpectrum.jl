@@ -1,0 +1,4 @@
+name = "MoleculeSpectrum"
+uuid = "35893526-f1dd-48d2-8180-97f6707ed43b"
+authors = ["kylematsuda <kyle.matsuda@colorado.edu>"]
+version = "0.1.0"
