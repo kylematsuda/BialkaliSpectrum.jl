@@ -10,156 +10,84 @@ using HalfIntegers
 using SphericalHarmonics
 using LinearAlgebra
 
-greet() = print("Hello World!")
-
-I_1 = HalfInt(4) # K
-I_2 = HalfInt(3/2) # Rb
-
-N_I_1 = 2 * I_1 + 1
-N_I_2 = 2 * I_2 + 1
-N_Hyperfine = N_I_1 * N_I_2
+I_K = HalfInt(4) # K
+I_Rb = HalfInt(3/2) # Rb
 
 struct State
     N::Int
-    m_N::Int
-    m_1::HalfIntegers.HalfInt # K
-    m_2::HalfIntegers.HalfInt # Rb
+    mₙ::Int
+    I::Array{HalfIntegers.HalfInt, 2} # [K, Rb]
+    mᵢ::Array{HalfIntegers.HalfInt, 2}
 end
 
-function index_to_state(i::Int)::State
+State(N, mₙ, I₁, mᵢ₁, I₂, mᵢ₂) = State(N, mₙ, [I₁ I₂], [mᵢ₁ mᵢ₂])
+
+n_hyperfine(I::HalfIntegers.HalfInt) = 2 * I + 1
+n_hyperfine(s::State) = mapreduce(n_hyperfine, *, s.I)
+
+N_Hyperfine = n_hyperfine(I_K) * n_hyperfine(I_Rb)
+
+m_F(s::State) = reduce(+, s.mᵢ) + s.mₙ
+
+function index_to_state(i::Int, I₁::HalfIntegers.HalfInt, I₂::HalfIntegers.HalfInt)::State
+    N_Hyperfine = mapreduce(n_hyperfine, *, [I₁ I₂;])
+
     # Hyperfine part
     i_hyperfine = (i - 1) % N_Hyperfine
-    m_1 = -I_1 + (i_hyperfine ÷ N_I_2)
-    m_2 = -I_2 + (i_hyperfine % N_I_2)
+    m_1 = -I₁ + (i_hyperfine ÷ n_hyperfine(I₂))
+    m_2 = -I₂ + (i_hyperfine % n_hyperfine(I₂))
     
     # Rotation part
     i_rotation = (i - 1) ÷ N_Hyperfine
     N::Int = floor(sqrt(i_rotation))
-    m_N = (i_rotation - N^2) - N
-    return State(N, m_N, m_1, m_2)
+    mₙ = (i_rotation - N^2) - N
+    return State(N, mₙ, I₁, m_1, I₂, m_2)
 end
 
+index_to_state(i::Int) = index_to_state(i, I_K, I_Rb)
+
 δ(i, j) = ==(i, j)
+δ(i::State, j::State) = δ(i.N, j.N) * δ(i.mₙ, j.mₙ) * δ(i.I, j.I) * δ(i.mᵢ, j.mᵢ)
 
 function dipole_matrix_element(p::Int, bra::State, ket::State)::Float64
-    N, m_N, m_1, m_2 = bra.N, bra.m_N, bra.m_1, bra.m_2
-    Np, m_Np, m_1p, m_2p = ket.N, ket.m_N, ket.m_1, ket.m_2
+    N, mₙ, mᵢ = bra.N, bra.mₙ, bra.mᵢ
+    N′, mₙ′, mᵢ′ = ket.N, ket.mₙ, ket.mᵢ
 
-    hyperfine = δ(m_1, m_1p) * δ(m_2, m_2p)
-    rotational = (-1)^m_N * sqrt((2*N + 1)*(2*Np + 1)) * WignerSymbols.wigner3j(N, 1, Np, -m_N, p, m_Np) * WignerSymbols.wigner3j(N, 1, Np, 0, 0, 0)
+    hyperfine = δ(mᵢ, mᵢ′)
+    rotational = (-1)^mₙ * sqrt((2*N + 1)*(2*N′ + 1)) * WignerSymbols.wigner3j(N, 1, N′, -mₙ, p, mₙ′) * WignerSymbols.wigner3j(N, 1, N′, 0, 0, 0)
     return hyperfine * rotational
 end
 
-function rotation_matrix_element(bra::State, ket::State)::Float64
-    N1, m_N1, m_11, m_21 = bra.N, bra.m_N, bra.m_1, bra.m_2
-    N2, m_N2, m_12, m_22 = ket.N, ket.m_N, ket.m_1, ket.m_2
-
-    return N1 * (N1 + 1) * δ(m_N1, m_N2) * δ(N1, N2) * δ(m_11, m_12) * δ(m_21, m_22) 
-end
+rotation_matrix_element(bra::State, ket::State)::Float64 = ket.N * (ket.N + 1) * δ(bra, ket) 
 
 function h_rot(N_max::Int, ε::Float64)
     elts::Int = (N_max + 1)^2 * N_Hyperfine
     H = zeros(elts, elts)
     for i = 1:elts
-        for j = 1:elts
+        for j = i:elts
             ket = index_to_state(i)
             bra = index_to_state(j)
             H[i, j] = rotation_matrix_element(bra, ket) + ε * dipole_matrix_element(0, bra, ket)
         end
     end
-    return H
+    return Hermitian(H)
 end
 
-function I_plus(I::HalfIntegers.HalfInt, m::HalfIntegers.HalfInt)::Float64
-    sqrt(I * (I + 1) - m * (m + 1))
+function nuclear_quadrupole(k::Int, bra::State, ket::State)::Float64
+    N, mₙ, I, mᵢ = bra.N, bra.mₙ, bra.I[k], bra.mᵢ[k]
+    N′, mₙ′, I′, mᵢ′ = ket.N, ket.mₙ, ket.I[k], ket.mᵢ[k]
+
+    # Brown and Carrington pg. 477
+    p_independent = δ(I,I′) * (-1)^(I - mᵢ - mₙ) * WignerSymbols.wigner3j(N, 2, N′, 0, 0, 0) * sqrt(2*N + 1) * sqrt(2*N′ + 1) / WignerSymbols.wigner3j(I, 2, I, -I, 0, I)
+    p_dependent(p) = (-1)^(p) * WignerSymbols.wigner3j(N, 2, N′, -mₙ, p, mₙ′) * WignerSymbols.wigner3j(I, 2, I, -mᵢ, -p, mᵢ′)
+
+    return p_independent * mapreduce(p_dependent, +, -2:2)
 end
 
-function I_minus(I::HalfIntegers.HalfInt, m::HalfIntegers.HalfInt)::Float64
-    sqrt(I * (I + 1) - m * (m - 1))
-end
-
-function I_p(p::Int, I::HalfIntegers.HalfInt, m::HalfIntegers.HalfInt)::Float64
-    @assert p == 0 || p == 1 || p == -1
-
-    if p == 0
-        return m
-    else
-        if (p * m > I)
-            return 0
-        else 
-            return -p * sqrt(I * (I + 1) - m * (m + p)) / sqrt(2)
-        end
-    end
-end
-
-
-# Spherical basis operator
-function operator_I_1(p::Int, bra::State, ket::State)::Float64 
-    N1, m_N1, m_11, m_21 = ket.N, ket.m_N, ket.m_1, ket.m_2
-    N2, m_N2, m_12, m_22 = bra.N, bra.m_N, bra.m_1, bra.m_2
-
-    deltas = δ(N1, N2) * δ(m_N1, m_N2) * δ(m_21, m_22) * δ(m_11 + p, m_12)
-    return deltas * I_p(p, I_1, m_11)
-end
-
-# Spherical basis operator
-function operator_I_2(p::Int, bra::State, ket::State)::Float64 
-    N1, m_N1, m_11, m_21 = ket.N, ket.m_N, ket.m_1, ket.m_2
-    N2, m_N2, m_12, m_22 = bra.N, bra.m_N, bra.m_1, bra.m_2
-
-    deltas = δ(N1, N2) * δ(m_N1, m_N2) * δ(m_11, m_12)  * δ(m_21 + p, m_22)
-    return deltas * I_p(p, I_2, m_21)
-end
-
-
-# Spherical basis operator I^(p_left) I^(p_right)
-function operator_II_1(p_left::Int, p_right::Int, bra::State, ket::State)::Float64 
-    N1, m_N1, m_11, m_21 = ket.N, ket.m_N, ket.m_1, ket.m_2
-    N2, m_N2, m_12, m_22 = bra.N, bra.m_N, bra.m_1, bra.m_2
-
-    deltas = δ(N1, N2) * δ(m_N1, m_N2) * δ(m_21, m_22) * δ(m_11 + p_left + p_right, m_12)
-    return deltas * I_p(p_left, I_1, m_11 + p_right) * I_p(p_right, I_1, m_11)
-end
-
-# Spherical basis operator I^(p_left) I^(p_right)
-function operator_II_2(p_left::Int, p_right::Int, bra::State, ket::State)::Float64 
-    N1, m_N1, m_11, m_21 = ket.N, ket.m_N, ket.m_1, ket.m_2
-    N2, m_N2, m_12, m_22 = bra.N, bra.m_N, bra.m_1, bra.m_2
-
-    deltas = δ(N1, N2) * δ(m_N1, m_N2) * δ(m_11, m_12) * δ(m_21 + p_left + p_right, m_22)
-    return deltas * I_p(p_left, I_2, m_21 + p_right) * I_p(p_right, I_2, m_21)
-end
-
-function T_1(α, β, bra::State, ket::State)::ComplexF64
-    components = [
-        operator_II_1(1, 1, bra, ket),
-        (operator_II_1(1, 0, bra, ket) + operator_II_1(0, 1, bra, ket)) / sqrt(2),
-        (operator_II_1(1, -1, bra, ket) + operator_II_1(-1, 1, bra, ket) + 2 * operator_II_1(0, 0, bra, ket)) / sqrt(6),
-        (operator_II_1(-1, 0, bra, ket) + operator_II_1(0, -1, bra, ket)) / sqrt(2),
-        operator_II_1(-1, -1, bra, ket)
-    ]
-
-    spherical_harmonics = [sqrt(4.0 * π / 5.0) * SphericalHarmonics.sphericalharmonic(α, β, l = 2, m = mm) for mm in -2:2]
-    return LinearAlgebra.dot(components, spherical_harmonics)
-end
-
-function T_2(α, β, bra::State, ket::State)::ComplexF64
-    components = [
-        operator_II_2(1, 1, bra, ket),
-        (operator_II_2(1, 0, bra, ket) + operator_II_2(0, 1, bra, ket)) / sqrt(2),
-        (operator_II_2(1, -1, bra, ket) + operator_II_2(-1, 1, bra, ket) + 2 * operator_II_2(0, 0, bra, ket)) / sqrt(6),
-        (operator_II_2(-1, 0, bra, ket) + operator_II_2(0, -1, bra, ket)) / sqrt(2),
-        operator_II_2(-1, -1, bra, ket)
-    ]
-
-    spherical_harmonics = [sqrt(4.0 * π / 5.0) * SphericalHarmonics.sphericalharmonic(α, β, l = 2, m = mm) for mm in -2:2]
-    return LinearAlgebra.dot(components, spherical_harmonics)
-end
-
-function h_quadrupole(N_max::Int, α, β)
+function h_quadrupole(N_max::Int)
     eqQ_1 = 0.452 # K, MHz
     eqQ_2 = -1.308 # Rb, MHz
-    prefactors = [eqQ_1 / (I_1*(I_1-1)), eqQ_2 / (I_2*(I_2-1))]
+    prefactors = [eqQ_1 / 4, eqQ_2 / 4]
 
     elts::Int = (N_max + 1)^2 * N_Hyperfine
     H = zeros(elts, elts)
@@ -167,7 +95,7 @@ function h_quadrupole(N_max::Int, α, β)
         for j = i:elts
             ket = index_to_state(i)
             bra = index_to_state(j)
-            H[i, j] = prefactors[1] * T_1(α, β, bra, ket) + prefactors[2] * T_2(α, β, bra, ket)
+            H[i, j] = dot(prefactors, [nuclear_quadrupole(k, bra, ket) for k in 1:2])
         end
     end
     return Hermitian(H)
@@ -188,14 +116,24 @@ function h_zeeman(N_max::Int, B_field::Float64)
     H = zeros(elts, elts)
     for i = 1:elts
         ket = index_to_state(i)
-        H[i, i] = -g_r * μ_N * B_field * ket.m_N - g_1 * μ_N * B_field * ket.m_1 * (1 - σ_1) - g_2 * μ_N * B_field * ket.m_2 * (1 - σ_2)
+        H[i, i] = -g_r * μ_N * B_field * ket.mₙ - μ_N * B_field * dot([g_1*(1-σ_1), g_2*(1-σ_2)], ket.mᵢ)
     end
-    return Hermitian(H)
+    return H
 end
 
-function h(N_max::Int, α::Float64, β::Float64, ε::Float64, B_field::Float64)
+function h(N_max::Int, ε::Float64, B_field::Float64)
     B_rot = 1113.9514
-    return B_rot * h_rot(N_max, ε) + h_quadrupole(N_max, α, β) + h_zeeman(N_max, B_field)
+    return B_rot * h_rot(N_max, ε) + h_quadrupole(N_max) + h_zeeman(N_max, B_field)
+end
+
+function fz(N_max::Int)
+    elts::Int = (N_max + 1)^2 * N_Hyperfine
+    H = zeros(elts, elts)
+    for i = 1:elts
+        ket = index_to_state(i)
+        H[i, i] = m_F(ket)
+    end
+    return H
 end
 
 end # module
