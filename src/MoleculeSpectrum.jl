@@ -105,6 +105,20 @@ function nuclear_spin_spin(bra::State, ket::State)::Float64
     return deltas * p_independent * mapreduce(p_dependent, +, -1:1)
 end
 
+function nuclear_spin_rotation(k::Int, bra::State, ket::State)::Float64
+    N, mₙ, I, mᵢ = bra.N, bra.mₙ, bra.I[k], bra.mᵢ[k]
+    N′, mₙ′, I′, mᵢ′ = ket.N, ket.mₙ, ket.I[k], ket.mᵢ[k]
+
+    other = (k % 2) + 1 # States of other nucleus should Kronecker delta
+    other_nucleus = δ(bra.I[other], ket.I[other]) * δ(bra.mᵢ[other], ket.mᵢ[other])
+
+    deltas = δ(N, N′) * δ(I, I′) * other_nucleus
+    p_independent = (-1)^(N + I - mₙ - mᵢ) * sqrt(N*(N+1)*(2*N + 1)) * sqrt(I*(I+1)*(2*I + 1))
+    p_dependent(p) = (-1)^p * WignerSymbols.wigner3j(N, 1, N′, -mₙ, p, mₙ′) * WignerSymbols.wigner3j(I, 1, I′, -mᵢ, -p, -mᵢ′)
+    
+    return deltas * p_independent * mapreduce(p_dependent, +, -1:1)
+end
+
 function h_quadrupole(N_max::Int)
     # Neyenhuis PRL
     eqQ_1 = 0.45 # K, MHz
@@ -138,6 +152,24 @@ function h_nuclear_spin_spin(N_max::Int)
     return Hermitian(H)
 end
 
+function h_nuclear_spin_rotation(N_max::Int)
+    # MHz, from Aldegunde PRA
+    cK = -24.1e-6
+    cRb = 420.1e-6
+    prefactors = [cK, cRb]
+
+    elts::Int = (N_max + 1)^2 * N_Hyperfine
+    H = zeros(elts, elts)
+    for i = 1:elts
+        for j = i:elts
+            ket = index_to_state(i)
+            bra = index_to_state(j)
+            H[i, j] = dot(prefactors,[nuclear_spin_rotation(k, bra, ket) for k in 1:2])
+        end
+    end
+    return Hermitian(H)
+end
+
 # no angle dependence for now
 function h_zeeman(N_max::Int, B_field::Float64)
     g_r = 0.014 # Aldegunde, PRA 78, 033434 (2008)
@@ -160,7 +192,11 @@ end
 
 function h(N_max::Int, ε::Float64, B_field::Float64)
     B_rot = 1113.9514 # Neyenhuis PRL
-    return B_rot * h_rot(N_max, ε) + h_quadrupole(N_max) + h_zeeman(N_max, B_field)
+
+    stark = B_rot * h_rot(N_max, ε)
+    hf = h_quadrupole(N_max) + h_nuclear_spin_spin(N_max) + h_nuclear_spin_rotation(N_max)
+    zeeman = h_zeeman(N_max, B_field)
+    return stark + hf + zeeman
 end
 
 function order_by_overlap_with(s::State, eigenvectors::Matrix)
