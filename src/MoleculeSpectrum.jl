@@ -46,6 +46,13 @@ end
 
 index_to_state(i::Int) = index_to_state(i, I_K, I_Rb)
 
+# Todo: test for state_to_index(index_to_state(x)) == x
+function state_to_index(s::State)::Int
+    rotation = (s.N^2 + 1) + (s.N + s.mₙ)
+    hyperfine = (s.I[1] + s.mᵢ[1]) * n_hyperfine(s.I[2]) + (s.I[2] + s.mᵢ[2])
+    return 1 + (rotation - 1) * N_Hyperfine + hyperfine
+end
+
 δ(i, j) = ==(i, j)
 δ(i::State, j::State) = δ(i.N, j.N) * δ(i.mₙ, j.mₙ) * δ(i.I, j.I) * δ(i.mᵢ, j.mᵢ)
 
@@ -77,15 +84,30 @@ function nuclear_quadrupole(k::Int, bra::State, ket::State)::Float64
     N, mₙ, I, mᵢ = bra.N, bra.mₙ, bra.I[k], bra.mᵢ[k]
     N′, mₙ′, I′, mᵢ′ = ket.N, ket.mₙ, ket.I[k], ket.mᵢ[k]
 
+    other = (k % 2) + 1 # States of other nucleus should Kronecker delta
+    other_nucleus = δ(bra.I[other], ket.I[other]) * δ(bra.mᵢ[other], ket.mᵢ[other])
+
     # Brown and Carrington pg. 477
-    p_independent = δ(I,I′) * (-1)^(I - mᵢ - mₙ) * WignerSymbols.wigner3j(N, 2, N′, 0, 0, 0) * sqrt(2*N + 1) * sqrt(2*N′ + 1) / WignerSymbols.wigner3j(I, 2, I, -I, 0, I)
+    p_independent = other_nucleus * δ(I,I′) * (-1)^(I - mᵢ - mₙ) * sqrt(2*N + 1) * sqrt(2*N′ + 1) * WignerSymbols.wigner3j(N, 2, N′, 0, 0, 0) / WignerSymbols.wigner3j(I, 2, I, -I, 0, I)
     p_dependent(p) = (-1)^(p) * WignerSymbols.wigner3j(N, 2, N′, -mₙ, p, mₙ′) * WignerSymbols.wigner3j(I, 2, I, -mᵢ, -p, mᵢ′)
 
     return p_independent * mapreduce(p_dependent, +, -2:2)
 end
 
+function nuclear_spin_spin(bra::State, ket::State)::Float64
+    N, mₙ, (I_1, I_2), (mᵢ_1, mᵢ_2) = bra.N, bra.mₙ, bra.I, bra.mᵢ
+    N′, mₙ′, (I_1′, I_2′), (mᵢ_1′, mᵢ_2′) = ket.N, ket.mₙ, ket.I, ket.mᵢ
+
+    deltas = δ(N, N′) * δ(mₙ, mₙ′) * δ(I_1, I_1′) * δ(I_2, I_2′)
+    p_independent = (-1)^(I_1 + I_2 - mᵢ_1 - mᵢ_2) * sqrt(I_1 * (I_1 + 1) * (2*I_1 + 1)) * sqrt(I_2 * (I_2 + 1) * (2*I_2 + 1))
+    p_dependent(p) = (-1)^p * WignerSymbols.wigner3j(I_1, 1, I_1′, -mᵢ_1, p, mᵢ_1′) * WignerSymbols.wigner3j(I_2, 1, I_2′, -mᵢ_2, -p, mᵢ_2′)
+
+    return deltas * p_independent * mapreduce(p_dependent, +, -1:1)
+end
+
 function h_quadrupole(N_max::Int)
-    eqQ_1 = 0.452 # K, MHz
+    # Neyenhuis PRL
+    eqQ_1 = 0.45 # K, MHz
     eqQ_2 = -1.308 # Rb, MHz
     prefactors = [eqQ_1 / 4, eqQ_2 / 4]
 
@@ -96,6 +118,21 @@ function h_quadrupole(N_max::Int)
             ket = index_to_state(i)
             bra = index_to_state(j)
             H[i, j] = dot(prefactors, [nuclear_quadrupole(k, bra, ket) for k in 1:2])
+        end
+    end
+    return Hermitian(H)
+end
+
+function h_nuclear_spin_spin(N_max::Int)
+    c4 = -2030.4e-6 # MHz, Aldegunde PRA 78, 033434 (2008)
+
+    elts::Int = (N_max + 1)^2 * N_Hyperfine
+    H = zeros(elts, elts)
+    for i = 1:elts
+        for j = i:elts
+            ket = index_to_state(i)
+            bra = index_to_state(j)
+            H[i, j] = c4 * nuclear_spin_spin(bra, ket)
         end
     end
     return Hermitian(H)
@@ -122,18 +159,25 @@ function h_zeeman(N_max::Int, B_field::Float64)
 end
 
 function h(N_max::Int, ε::Float64, B_field::Float64)
-    B_rot = 1113.9514
+    B_rot = 1113.9514 # Neyenhuis PRL
     return B_rot * h_rot(N_max, ε) + h_quadrupole(N_max) + h_zeeman(N_max, B_field)
 end
 
-function fz(N_max::Int)
-    elts::Int = (N_max + 1)^2 * N_Hyperfine
-    H = zeros(elts, elts)
-    for i = 1:elts
-        ket = index_to_state(i)
-        H[i, i] = m_F(ket)
-    end
-    return H
+function order_by_overlap_with(s::State, eigenvectors::Matrix)
+    i = state_to_index(s)
+    @assert i < size(eigenvectors, 1)
+    return sortslices(eigenvectors, dims=2, lt=(x,y)->isless(abs2(x[i]), abs2(y[i])), rev=true)
+end
+
+# Returns tuple (overlap, )
+function max_overlap_with(s::State, eigenvectors::Matrix)
+    i = state_to_index(s)
+    n_states = size(eigenvectors, 1)
+    @assert i < n_states
+
+    findmax(
+        map(x -> abs2(x[i]), eachcol(eigenvectors))
+    )
 end
 
 end # module
