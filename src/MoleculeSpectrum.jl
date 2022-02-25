@@ -190,13 +190,57 @@ function h_zeeman(N_max::Int, B_field::Float64)
     return H
 end
 
-function h(N_max::Int, ε::Float64, B_field::Float64)
+function T2pol(θ, φ)
+    x = sin(θ) * cos(φ)
+    y = sin(θ) * sin(φ)
+    z = cos(θ)
+
+    T20 = (2*z^2 - x^2 - y^2) / sqrt(6)
+    T21 = -(1/2)*(x*z + z*x + im * (y*z + z*y))
+    T22 = (1/2)*(x*x - y*y + im*(x*y + y*x))
+
+    return [conj(T22), -conj(T21), T20, T21, T22]
+end
+
+scalar_polarizability(bra::State, ket::State) = δ(bra, ket)
+function tensor_polarizability(bra::State, ket::State, T2ϵϵ) 
+    deltas = δ(bra.N, ket.N) * δ(bra.I, ket.I) * δ(bra.mᵢ, ket.mᵢ)
+    N, mₙ = bra.N, bra.mₙ
+    mₙ′ = ket.mₙ
+
+    p_independent = deltas * sqrt(6) * (-1)^(mₙ) * (2*N + 1) * WignerSymbols.wigner3j(N, 2, N, 0, 0, 0)
+    p_dependent(p) = (-1)^p * T2ϵϵ[p+3] * WignerSymbols.wigner3j(N, 2, N, -mₙ, -p, mₙ′)
+
+    return p_independent * mapreduce(p_dependent, +, -2:2)
+end
+
+function h_ac(N_max::Int, I_laser::Float64, θ_laser::Float64, φ_laser::Float64)
+    α_par = 10.0e-5 # MHz / (W / cm^2)
+    α_perp = 3.3e-5 # MHz / (W / cm^2)
+    T2ϵϵ = T2pol(θ_laser, φ_laser)
+
+    elts::Int = (N_max + 1)^2 * N_Hyperfine
+    H = zeros(elts, elts)
+    for i = 1:elts
+        for j = i:elts
+            ket = index_to_state(i)
+            bra = index_to_state(j)
+            scalar = ((α_par + 2 * α_perp) / 3) * scalar_polarizability(bra, ket)
+            tensor = ((α_par - α_perp) / 3) * tensor_polarizability(bra, ket, T2ϵϵ)
+            H[i, j] = -(scalar + tensor) * I_laser
+        end
+    end
+    return Hermitian(H)
+end
+
+function h(N_max::Int, ε::Float64, B_field::Float64, I_laser::Float64, θ_laser::Float64, φ_laser::Float64)
     B_rot = 1113.9514 # Neyenhuis PRL
 
-    stark = B_rot * h_rot(N_max, ε)
+    dc_stark = B_rot * h_rot(N_max, ε)
     hf = h_quadrupole(N_max) + h_nuclear_spin_spin(N_max) + h_nuclear_spin_rotation(N_max)
     zeeman = h_zeeman(N_max, B_field)
-    return stark + hf + zeeman
+    ac_stark = h_ac(N_max, I_laser, θ_laser, φ_laser)
+    return dc_stark + hf + zeeman + ac_stark
 end
 
 function order_by_overlap_with(s::State, eigenvectors::Matrix)
@@ -205,7 +249,7 @@ function order_by_overlap_with(s::State, eigenvectors::Matrix)
     return sortslices(eigenvectors, dims=2, lt=(x,y)->isless(abs2(x[i]), abs2(y[i])), rev=true)
 end
 
-# Returns tuple (overlap, )
+# Returns tuple (overlap, index)
 function max_overlap_with(s::State, eigenvectors::Matrix)
     i = state_to_index(s)
     n_states = size(eigenvectors, 1)
