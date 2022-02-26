@@ -5,9 +5,6 @@ using HalfIntegers
 using LinearAlgebra
 using SparseArrays
 
-# const I_K = HalfInt(4) # K
-# const I_Rb = HalfInt(3/2) # Rb
-
 struct ZeemanParameters
     "Rotational g factor"
     gᵣ::Float64
@@ -230,13 +227,6 @@ end
 function h_quadrupole(molecular_parameters::MolecularParameters, basis::Vector{State})
     (eqQ_1, eqQ_2) = molecular_parameters.nuclear.eqQᵢ
 
-    # # Neyenhuis PRL
-    # eqQ_1 = 0.45 # K, MHz
-    # eqQ_2 = -1.308 # Rb, MHz
-
-    # # Silke PRL
-    # # eqQ_2 = -1.41 # Rb, MHz
-
     elts::Int = length(basis)
     H = spzeros(elts, elts)
 
@@ -253,8 +243,6 @@ end
 function h_nuclear_spin_spin(molecular_parameters::MolecularParameters, basis::Vector{State})
     c4 = molecular_parameters.nuclear.c₄
 
-    # c4 = -2030.4e-6 # MHz, Aldegunde PRA 78, 033434 (2008)
-
     elts::Int = length(basis)
     H = spzeros(elts, elts)
     for i = 1:elts
@@ -268,10 +256,7 @@ function h_nuclear_spin_spin(molecular_parameters::MolecularParameters, basis::V
 end
 
 function h_nuclear_spin_rotation(molecular_parameters::MolecularParameters, basis::Vector{State})
-    # MHz, from Aldegunde PRA
     (c1, c2) = molecular_parameters.nuclear.cᵢ
-    # cK = -24.1e-6
-    # cRb = 420.1e-6
 
     elts::Int = length(basis)
     H = spzeros(elts, elts)
@@ -292,15 +277,6 @@ function h_zeeman(molecular_parameters::MolecularParameters, basis::Vector{State
     g_r = molecular_parameters.zeeman.gᵣ
     (g_1, g_2) = molecular_parameters.zeeman.gᵢ
     (σ_1, σ_2) = molecular_parameters.zeeman.σᵢ
-
-    # g_r = 0.014 # Aldegunde, PRA 78, 033434 (2008)
-    # μ_N = 7.622593285e-4 # MHz/G
-
-    # # Aldegunde, PRA 78, 033434 (2008)
-    # g_1 = -0.324 # g_K
-    # g_2 = 1.834 # g_Rb
-    # σ_1 = 1321e-6
-    # σ_2 = 3469e-6
 
     elts::Int = length(basis)
     H = spzeros(elts, elts)
@@ -341,9 +317,6 @@ end
 function h_ac(molecular_parameters::MolecularParameters, basis::Vector{State}, I_laser::Float64, θ_laser::Float64, φ_laser::Float64)
     α_par = molecular_parameters.α.α_par
     α_perp = molecular_parameters.α.α_perp
-
-    # α_par = 10.0e-5 # MHz / (W / cm^2)
-    # α_perp = 3.3e-5 # MHz / (W / cm^2)
     T2ϵϵ = T2pol(θ_laser, φ_laser)
 
     elts::Int = length(basis)
@@ -362,13 +335,10 @@ end
 
 
 function h(molecular_parameters::MolecularParameters, N_max::Int, ε::Float64, B_field::Float64, I_laser::Float64, θ_laser::Float64, φ_laser::Float64)
-    B_rot = molecular_parameters.Bᵣ
-
-    # B_rot = 1113.9514 # Neyenhuis PRL
-    # # B_rot = 1113.950 # Silke PRL
-
     basis = generate_basis(molecular_parameters, N_max)
-
+    
+    B_rot = molecular_parameters.Bᵣ
+    
     dc_stark = B_rot * h_rot(basis, ε)
     hf = h_quadrupole(molecular_parameters, basis) + h_nuclear_spin_spin(molecular_parameters, basis) + h_nuclear_spin_rotation(molecular_parameters, basis)
     zeeman = h_zeeman(molecular_parameters, basis, B_field)
