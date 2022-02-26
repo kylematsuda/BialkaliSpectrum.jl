@@ -17,16 +17,16 @@ struct ZeemanParameters
     "Rotational g factor"
     gᵣ::Float64
     "Nuclear g factor"
-    gᵢ::Array{Float64, 2}
+    gᵢ::Array{Float64}
     "Nuclear shielding factor"
-    σᵢ::Array{Float64, 2}
+    σᵢ::Array{Float64}
 end
 
 struct NuclearParameters
     "Nuclear electric quadrupole (MHz)"
-    eqQᵢ::Array{Float64, 2}
+    eqQᵢ::Array{Float64}
     "Nuclear spin-rotation interaction (MHz)"
-    cᵢ::Array{Float64, 2}
+    cᵢ::Array{Float64}
     "Nuclear spin-spin scalar interaction (MHz)"
     c₄::Float64
 end
@@ -44,7 +44,7 @@ struct MolecularParameters
     "Rotational constant (MHz)"
     Bᵣ::Float64
     "Nuclear angular momenta"
-    I::Array{HalfInt, 2}
+    I::Array{HalfInt}
     "Zeeman parameters"
     zeeman::ZeemanParameters
     "Nuclear Parameters"
@@ -82,7 +82,6 @@ struct SphericalVector
             if φr != φ
                 @warn "φ was provided outside of [0, 2π)"
             end
-
             return new(magnitude, θ, φr)
         end
     end
@@ -99,6 +98,61 @@ end
 VectorX(magnitude) = SphericalVector(magnitude, π/2, 0)
 VectorY(magnitude) = SphericalVector(magnitude, π/2, π/2)
 VectorZ(magnitude) = SphericalVector(magnitude, 0, 0)
+
+struct SphericalUnitVector
+    "Polar angle (rad)"
+    θ::Float64
+    "Azimuthal angle (rad)"
+    φ::Float64
+
+    function SphericalUnitVector(θ, φ)
+        if θ < 0 || θ > π
+            error("Polar angle must be in [0, π]")
+        else
+            φr = rem2pi(φ, RoundDown)
+            if φr != φ
+                @warn "φ was provided outside of [0, 2π)"
+            end
+            return new(θ, φr)
+        end
+    end
+
+    SphericalUnitVector(v::SphericalVector) = new(v.θ, v.φ)
+end
+
+Base.:-(uv::SphericalUnitVector) = SphericalUnitVector(π - uv.θ, uv.φ + π)
+
+UnitVectorX() = SphericalUnitVector(π/2, 0)
+UnitVectorY() = SphericalUnitVector(π/2, π/2)
+UnitVectorZ() = SphericalUnitVector(0, 0)
+
+function T⁽¹⁾(v::SphericalUnitVector)::Vector{ComplexF64}
+    x = sin(v.θ) * cos(v.φ)
+    y = sin(v.θ) * sin(v.φ)
+    z = cos(v.θ)
+
+    T11 = -(1/sqrt(2)) * (x + im*y)
+    T10 = z
+
+    return [-conj(T11), T10, T11]
+end
+
+function T⁽²⁾(v::SphericalUnitVector)::Vector{ComplexF64}
+    x = sin(θ) * cos(φ)
+    y = sin(θ) * sin(φ)
+    z = cos(θ)
+
+    T20 = (2*z^2 - x^2 - y^2) / sqrt(6)
+    T21 = -(1/2)*(x*z + z*x + im * (y*z + z*y))
+    T22 = (1/2)*(x*x - y*y + im*(x*y + y*x))
+
+    return [conj(T22), -conj(T21), T20, T21, T22]
+end
+
+function get_tensor_component(p::Int, tensor::Vector{ComplexF64})
+    rank::Int = (length(tensor)-1) // 2 # Length should be 2*k + 1
+    return tensor[1 + (p + rank)]
+end
 
 struct ExternalFields
     "Magnetic field (G)"
@@ -202,8 +256,9 @@ function dipole_matrix_element(p::Int, bra::State, ket::State)::Float64
     end
 end
 
-rotation_matrix_element(bra::State, ket::State)::Float64 = ket.N * (ket.N + 1) * δ(bra, ket) 
+rotation_matrix_element(bra::State, ket::State)::Float64 = ket.N * (ket.N + 1) * δ(bra, ket)
 
+# TODO: remove
 function h_rot(basis::Vector{State}, ε::Float64)
     elts::Int = length(basis)
     H = spzeros(elts, elts)
@@ -212,6 +267,30 @@ function h_rot(basis::Vector{State}, ε::Float64)
         for j = i:elts
             bra = basis[j]
             H[i, j] = rotation_matrix_element(bra, ket) + ε * dipole_matrix_element(0, bra, ket)
+        end
+    end
+    return Hermitian(H)
+end
+
+function h_rotation(basis::Vector{State})
+    return Diagonal(map(x -> rotation_matrix_element(x, x), basis))
+end
+
+function h_dipole(basis::Vector{State}, E_n::SphericalUnitVector)
+    T⁽¹⁾n = T⁽¹⁾(E_n) # Spherical tensor components of E-field unit vector
+
+    elts::Int = length(basis)
+    H = spzeros(elts, elts)
+    for i = 1:elts
+        ket = basis[i]
+        for j = i:elts
+            bra = basis[j]
+            matrix_elements = [dipole_matrix_element(p, bra, ket) for p in -1:1]
+
+            # dot() conjugates the first argument
+            # Recall T^k(A)⋅T^k(B) = ∑ (-1)^p T^k_p (A) T^k_{-p}(B)
+            # Since T^k_{-p} (A) = -conj(T^k_p (A)), the dot product gives the correct expression
+            H[i, j] = dot(T⁽¹⁾n, matrix_elements)
         end
     end
     return Hermitian(H)
@@ -287,6 +366,20 @@ function h_quadrupole(molecular_parameters::MolecularParameters, basis::Vector{S
     return Hermitian(H)
 end
 
+function h_quadrupole(k::Int, basis::Vector{State})
+    elts::Int = length(basis)
+    H = spzeros(elts, elts)
+
+    for i = 1:elts
+        ket = basis[i]
+        for j = i:elts
+            bra = basis[j]
+            H[i, j] = nuclear_quadrupole(k, bra, ket)
+        end
+    end
+    return Hermitian(H)
+end
+
 function h_nuclear_spin_spin(molecular_parameters::MolecularParameters, basis::Vector{State})
     c4 = molecular_parameters.nuclear.c₄
 
@@ -302,6 +395,20 @@ function h_nuclear_spin_spin(molecular_parameters::MolecularParameters, basis::V
     return Hermitian(H)
 end
 
+function h_nuclear_spin_spin(basis::Vector{State})
+    elts::Int = length(basis)
+    H = spzeros(elts, elts)
+    for i = 1:elts
+        ket = basis[i]
+        for j = i:elts
+            bra = basis[j]
+            H[i, j] = nuclear_spin_spin(bra, ket)
+        end
+    end
+    return Hermitian(H)
+end
+
+
 function h_nuclear_spin_rotation(molecular_parameters::MolecularParameters, basis::Vector{State})
     (c1, c2) = molecular_parameters.nuclear.cᵢ
 
@@ -312,6 +419,19 @@ function h_nuclear_spin_rotation(molecular_parameters::MolecularParameters, basi
         for j = i:elts
             bra = basis[j]
             H[i, j] = c1 * nuclear_spin_rotation(1, bra, ket) + c2 * nuclear_spin_rotation(2, bra, ket)
+        end
+    end
+    return Hermitian(H)
+end
+
+function h_nuclear_spin_rotation(k::Int, basis::Vector{State})
+    elts::Int = length(basis)
+    H = spzeros(elts, elts)
+    for i = 1:elts
+        ket = basis[i]
+        for j = i:elts
+            bra = basis[j]
+            H[i, j] = nuclear_spin_rotation(k, bra, ket)
         end
     end
     return Hermitian(H)
@@ -333,6 +453,69 @@ function h_zeeman(molecular_parameters::MolecularParameters, basis::Vector{State
     return H
 end
 
+function T⁽¹⁾N(p::Int, bra::State, ket::State)::ComplexF64
+    N, mₙ, I, mᵢ = bra.N, bra.mₙ, bra.I, bra.mᵢ
+    N′, mₙ′, I′, mᵢ′ = ket.N, ket.mₙ, ket.I, ket.mᵢ
+
+    deltas = δ(I, I′) * δ(mᵢ, mᵢ′) * δ(N, N′)
+
+    if deltas && (mₙ′ - mₙ + p == 0)
+        return (-1)^(N - mₙ) * sqrt(N*(N+1)*(2N+1)) * WignerSymbols.wigner3j(N, 1, N, -mₙ, p, mₙ′)
+    else
+        return 0
+    end
+end
+
+function T⁽¹⁾Iₖ(p::Int, k::Int, bra::State, ket::State)::ComplexF64
+    N, mₙ, I, mᵢ = bra.N, bra.mₙ, bra.I[k], bra.mᵢ[k]
+    N′, mₙ′, I′, mᵢ′ = ket.N, ket.mₙ, ket.I[k], ket.mᵢ[k]
+
+    other = (k % 2) + 1 # States of other nucleus should Kronecker delta
+    other_nucleus = δ(bra.I[other], ket.I[other]) * δ(bra.mᵢ[other], ket.mᵢ[other])
+
+    deltas = δ(I, I′) * δ(N, N′) * δ(mₙ, mₙ′) * other_nucleus
+
+    if deltas && (mᵢ′ - mᵢ + p == 0)
+        return (-1)^(I - mᵢ) * sqrt(I*(I+1)*(2I+1)) * WignerSymbols.wigner3j(I, 1, I, -mᵢ, p, mᵢ′)
+    else
+        return 0
+    end
+end
+
+
+# no angle dependence for now
+function h_zeeman_rotation(basis::Vector{State}, B_n::SphericalUnitVector)
+    T⁽¹⁾B = T⁽¹⁾(B_n)
+
+    elts::Int = length(basis)
+    H = spzeros(elts, elts)
+    for i = 1:elts
+        ket = basis[i]
+        for j = i:elts
+            bra = basis[j]
+            H[i, j] = dot(T⁽¹⁾B, [T⁽¹⁾N(p, bra, ket) for p in -1:1])
+        end
+    end
+    return H
+end
+
+# no angle dependence for now
+function h_zeeman_nuclear(basis::Vector{State}, k::Int, B_n::SphericalUnitVector)
+    T⁽¹⁾B = T⁽¹⁾(B_n)
+
+    elts::Int = length(basis)
+    H = spzeros(elts, elts)
+    for i = 1:elts
+        ket = basis[i]
+        for j = i:elts
+            bra = basis[j]
+            H[i, j] = dot(T⁽¹⁾B, [T⁽¹⁾Iₖ(p, k, bra, ket) for p in -1:1])
+        end
+    end
+    return H
+end
+
+# Remove me later
 function T2pol(θ, φ)
     x = sin(θ) * cos(φ)
     y = sin(θ) * sin(φ)
@@ -396,11 +579,22 @@ function hamiltonian(molecular_parameters::MolecularParameters, N_max::Int, exte
     
     B_rot = molecular_parameters.Bᵣ
     ε = Constants.DVcm⁻¹ToMHz * external_fields.E.magnitude / B_rot
-    B_field = external_fields.B.magnitude
     
     dc_stark = B_rot * h_rot(basis, ε)
     hf = h_quadrupole(molecular_parameters, basis) + h_nuclear_spin_spin(molecular_parameters, basis) + h_nuclear_spin_rotation(molecular_parameters, basis)
-    zeeman = h_zeeman(molecular_parameters, basis, B_field)
+
+    B_field = external_fields.B.magnitude
+    B_n = SphericalUnitVector(external_fields.B)
+    μN = Constants.μN
+    gr = molecular_parameters.zeeman.gᵣ
+    (g1, g2) = molecular_parameters.zeeman.gᵢ
+    (σ1, σ2) = molecular_parameters.zeeman.σᵢ
+    zeeman_rotation = -μN * B_field * gr * h_zeeman_rotation(basis, B_n)
+
+    (hzn1, hzn2) = [h_zeeman_nuclear(basis, k, B_n) for k in 1:2]
+    zeeman_nuclear = -μN * B_field * (g1*(1-σ1)*hzn1 + g2*(1-σ2)*hzn2)
+    zeeman = zeeman_rotation + zeeman_nuclear
+
     ac_stark = h_ac(molecular_parameters, basis, 0.0, 0.0, 0.0)
     return Array(Hermitian(dc_stark + hf + zeeman + ac_stark))
 end
