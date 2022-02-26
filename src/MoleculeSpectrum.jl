@@ -1,9 +1,3 @@
-__precompile__(false)
-
-using Pkg
-Pkg.add("WignerSymbols")
-Pkg.add("HalfIntegers")
-
 module MoleculeSpectrum
 
 using WignerSymbols
@@ -11,8 +5,71 @@ using HalfIntegers
 using LinearAlgebra
 using SparseArrays
 
-const I_K = HalfInt(4) # K
-const I_Rb = HalfInt(3/2) # Rb
+# const I_K = HalfInt(4) # K
+# const I_Rb = HalfInt(3/2) # Rb
+
+struct ZeemanParameters
+    "Rotational g factor"
+    gᵣ::Float64
+    "Nuclear g factor"
+    gᵢ::Array{Float64, 2}
+    "Nuclear shielding factor"
+    σᵢ::Array{Float64, 2}
+end
+
+struct NuclearParameters
+    "Nuclear electric quadrupole (MHz)"
+    eqQᵢ::Array{Float64, 2}
+    "Nuclear spin-rotation interaction (MHz)"
+    cᵢ::Array{Float64, 2}
+    "Nuclear spin-spin scalar interaction (MHz)"
+    c₄::Float64
+end
+
+struct Polarizability
+    "Parallel ac polarizability (MHz / (W / cm^2))"
+    α_par::Float64
+    "Perpendicular ac polarizability (MHz / (W / cm^2))"
+    α_perp::Float64
+end
+
+struct MolecularParameters
+    "Permanent dipole moment (Debye)"
+    dₚ::Float64
+    "Rotational constant (MHz)"
+    Bᵣ::Float64
+    "Nuclear angular momenta"
+    I::Array{HalfInt, 2}
+    "Zeeman parameters"
+    zeeman::ZeemanParameters
+    "Nuclear Parameters"
+    nuclear::NuclearParameters
+    "Molecular polarizability at the trapping wavelength"
+    α::Polarizability
+end
+
+const KRb_Zeeman = ZeemanParameters(0.014, [-0.324 1.834], [1321e-6 3469e-6])
+const KRb_Polarizability = Polarizability(10.0e-5, 3.3e-5)
+
+const KRb_Nuclear_Neyenhuis = NuclearParameters([0.45 -1.308], [-24.1e-6 420.1e-6], -2030.4e-6)
+const KRb_Nuclear_Ospelkaus = NuclearParameters([0.45 -1.41], [-24.1e-6 420.1e-6], -2030.4e-6)
+
+const KRb_Parameters_Neyenhuis = MolecularParameters(0.574, 1113.9514, [HalfInt(4) HalfInt(3/2)], KRb_Zeeman, KRb_Nuclear_Neyenhuis, KRb_Polarizability)
+const KRb_Parameters_Ospelkaus = MolecularParameters(0.574, 1113.9514, [HalfInt(4) HalfInt(3/2)], KRb_Zeeman, KRb_Nuclear_Ospelkaus, KRb_Polarizability)
+
+const DEFAULT_MOLECULAR_PARAMETERS = KRb_Parameters_Neyenhuis
+
+struct SphericalVector
+    magnitude::Float64
+    θ::Float64
+    φ::Float64
+end
+
+struct ExternalFields
+    B::SphericalVector
+    E::SphericalVector
+    Optical::Vector{SphericalVector}
+end
 
 struct State
     N::Int
@@ -22,14 +79,12 @@ struct State
 end
 
 State(N, mₙ, I₁, mᵢ₁, I₂, mᵢ₂) = State(N, mₙ, [I₁ I₂], [mᵢ₁ mᵢ₂])
-State(N, mₙ, mᵢ₁::Number, mᵢ₂::Number) = State(N, mₙ, [I_K I_Rb], [HalfIntegers.HalfInt(mᵢ₁) HalfIntegers.HalfInt(mᵢ₂)])
+State(N, mₙ, mᵢ₁::Number, mᵢ₂::Number) = State(N, mₙ, DEFAULT_MOLECULAR_PARAMETERS.I, [HalfIntegers.HalfInt(mᵢ₁) HalfIntegers.HalfInt(mᵢ₂)])
 
 n_hyperfine(I::HalfIntegers.HalfInt) = 2 * I + 1
 n_hyperfine(s::State) = mapreduce(n_hyperfine, *, s.I)
 
-const N_Hyperfine = n_hyperfine(I_K) * n_hyperfine(I_Rb)
-
-m_F(s::State) = reduce(+, s.mᵢ) + s.mₙ
+# const N_Hyperfine = n_hyperfine(I_K) * n_hyperfine(I_Rb)
 
 function index_to_state(i::Int, I₁::HalfIntegers.HalfInt, I₂::HalfIntegers.HalfInt)::State
     N_Hyperfine = mapreduce(n_hyperfine, *, [I₁ I₂;])
@@ -46,13 +101,42 @@ function index_to_state(i::Int, I₁::HalfIntegers.HalfInt, I₂::HalfIntegers.H
     return State(N, mₙ, I₁, m_1, I₂, m_2)
 end
 
-index_to_state(i::Int) = index_to_state(i, I_K, I_Rb)
+index_to_state(i::Int) = index_to_state(i, DEFAULT_MOLECULAR_PARAMETERS.I[1], DEFAULT_MOLECULAR_PARAMETERS.I[2])
 
 # Todo: test for state_to_index(index_to_state(x)) == x
 function state_to_index(s::State)::Int
     rotation = (s.N^2 + 1) + (s.N + s.mₙ)
     hyperfine = (s.I[1] + s.mᵢ[1]) * n_hyperfine(s.I[2]) + (s.I[2] + s.mᵢ[2])
+
+    N_Hyperfine = n_hyperfine(s)
     return 1 + (rotation - 1) * N_Hyperfine + hyperfine
+end
+
+function order_by_overlap_with(s::State, eigenvectors::Matrix)
+    i = state_to_index(s)
+    @assert i < size(eigenvectors, 1)
+    return sortslices(eigenvectors, dims=2, lt=(x,y)->isless(abs2(x[i]), abs2(y[i])), rev=true)
+end
+
+# Returns tuple (overlap, index)
+function max_overlap_with(s::State, eigenvectors::Matrix)
+    i = state_to_index(s)
+    n_states = size(eigenvectors, 1)
+    @assert i < n_states
+
+    findmax(
+        map(x -> abs2(x[i]), eachcol(eigenvectors))
+    )
+end
+
+function energy_difference(g::State, e::State, energies::Vector, eigenvectors::Matrix)
+    indices = map(x -> max_overlap_with(x, eigenvectors)[2], [e, g])
+    return mapreduce(x -> energies[x], -, indices)
+end
+
+function generate_basis(molecular_parameters::MolecularParameters, N_max::Int)
+    n_elts::Int = (N_max + 1)^2 * mapreduce(n_hyperfine, *, molecular_parameters.I)
+    return map(index_to_state, 1:n_elts)
 end
 
 δ(i, j) = ==(i, j)
@@ -143,13 +227,15 @@ function nuclear_spin_rotation(k::Int, bra::State, ket::State)::Float64
     end
 end
 
-function h_quadrupole(basis::Vector{State})
-    # Neyenhuis PRL
-    eqQ_1 = 0.45 # K, MHz
-    eqQ_2 = -1.308 # Rb, MHz
+function h_quadrupole(molecular_parameters::MolecularParameters, basis::Vector{State})
+    (eqQ_1, eqQ_2) = molecular_parameters.nuclear.eqQᵢ
 
-    # Silke PRL
-    # eqQ_2 = -1.41 # Rb, MHz
+    # # Neyenhuis PRL
+    # eqQ_1 = 0.45 # K, MHz
+    # eqQ_2 = -1.308 # Rb, MHz
+
+    # # Silke PRL
+    # # eqQ_2 = -1.41 # Rb, MHz
 
     elts::Int = length(basis)
     H = spzeros(elts, elts)
@@ -164,8 +250,10 @@ function h_quadrupole(basis::Vector{State})
     return Hermitian(H)
 end
 
-function h_nuclear_spin_spin(basis::Vector{State})
-    c4 = -2030.4e-6 # MHz, Aldegunde PRA 78, 033434 (2008)
+function h_nuclear_spin_spin(molecular_parameters::MolecularParameters, basis::Vector{State})
+    c4 = molecular_parameters.nuclear.c₄
+
+    # c4 = -2030.4e-6 # MHz, Aldegunde PRA 78, 033434 (2008)
 
     elts::Int = length(basis)
     H = spzeros(elts, elts)
@@ -179,10 +267,11 @@ function h_nuclear_spin_spin(basis::Vector{State})
     return Hermitian(H)
 end
 
-function h_nuclear_spin_rotation(basis::Vector{State})
+function h_nuclear_spin_rotation(molecular_parameters::MolecularParameters, basis::Vector{State})
     # MHz, from Aldegunde PRA
-    cK = -24.1e-6
-    cRb = 420.1e-6
+    (c1, c2) = molecular_parameters.nuclear.cᵢ
+    # cK = -24.1e-6
+    # cRb = 420.1e-6
 
     elts::Int = length(basis)
     H = spzeros(elts, elts)
@@ -190,22 +279,28 @@ function h_nuclear_spin_rotation(basis::Vector{State})
         ket = basis[i]
         for j = i:elts
             bra = basis[j]
-            H[i, j] = cK * nuclear_spin_rotation(1, bra, ket) + cRb * nuclear_spin_rotation(2, bra, ket)
+            H[i, j] = c1 * nuclear_spin_rotation(1, bra, ket) + c2 * nuclear_spin_rotation(2, bra, ket)
         end
     end
     return Hermitian(H)
 end
 
 # no angle dependence for now
-function h_zeeman(basis::Vector{State}, B_field::Float64)
-    g_r = 0.014 # Aldegunde, PRA 78, 033434 (2008)
+function h_zeeman(molecular_parameters::MolecularParameters, basis::Vector{State}, B_field::Float64)
     μ_N = 7.622593285e-4 # MHz/G
 
-    # Aldegunde, PRA 78, 033434 (2008)
-    g_1 = -0.324 # g_K
-    g_2 = 1.834 # g_Rb
-    σ_1 = 1321e-6
-    σ_2 = 3469e-6
+    g_r = molecular_parameters.zeeman.gᵣ
+    (g_1, g_2) = molecular_parameters.zeeman.gᵢ
+    (σ_1, σ_2) = molecular_parameters.zeeman.σᵢ
+
+    # g_r = 0.014 # Aldegunde, PRA 78, 033434 (2008)
+    # μ_N = 7.622593285e-4 # MHz/G
+
+    # # Aldegunde, PRA 78, 033434 (2008)
+    # g_1 = -0.324 # g_K
+    # g_2 = 1.834 # g_Rb
+    # σ_1 = 1321e-6
+    # σ_2 = 3469e-6
 
     elts::Int = length(basis)
     H = spzeros(elts, elts)
@@ -243,9 +338,12 @@ function tensor_polarizability(bra::State, ket::State, T2ϵϵ)
     end
 end
 
-function h_ac(basis::Vector{State}, I_laser::Float64, θ_laser::Float64, φ_laser::Float64)
-    α_par = 10.0e-5 # MHz / (W / cm^2)
-    α_perp = 3.3e-5 # MHz / (W / cm^2)
+function h_ac(molecular_parameters::MolecularParameters, basis::Vector{State}, I_laser::Float64, θ_laser::Float64, φ_laser::Float64)
+    α_par = molecular_parameters.α.α_par
+    α_perp = molecular_parameters.α.α_perp
+
+    # α_par = 10.0e-5 # MHz / (W / cm^2)
+    # α_perp = 3.3e-5 # MHz / (W / cm^2)
     T2ϵϵ = T2pol(θ_laser, φ_laser)
 
     elts::Int = length(basis)
@@ -262,44 +360,22 @@ function h_ac(basis::Vector{State}, I_laser::Float64, θ_laser::Float64, φ_lase
     return Hermitian(H)
 end
 
-function generate_basis(N_max::Int)
-    n_elts::Int = (N_max + 1)^2 * N_Hyperfine
-    return map(index_to_state, 1:n_elts)
-end
 
-function h(N_max::Int, ε::Float64, B_field::Float64, I_laser::Float64, θ_laser::Float64, φ_laser::Float64)
-    B_rot = 1113.9514 # Neyenhuis PRL
-    # B_rot = 1113.950 # Silke PRL
+function h(molecular_parameters::MolecularParameters, N_max::Int, ε::Float64, B_field::Float64, I_laser::Float64, θ_laser::Float64, φ_laser::Float64)
+    B_rot = molecular_parameters.Bᵣ
 
-    basis = generate_basis(N_max)
+    # B_rot = 1113.9514 # Neyenhuis PRL
+    # # B_rot = 1113.950 # Silke PRL
+
+    basis = generate_basis(molecular_parameters, N_max)
 
     dc_stark = B_rot * h_rot(basis, ε)
-    hf = h_quadrupole(basis) + h_nuclear_spin_spin(basis) + h_nuclear_spin_rotation(basis)
-    zeeman = h_zeeman(basis, B_field)
-    ac_stark = h_ac(basis, I_laser, θ_laser, φ_laser)
+    hf = h_quadrupole(molecular_parameters, basis) + h_nuclear_spin_spin(molecular_parameters, basis) + h_nuclear_spin_rotation(molecular_parameters, basis)
+    zeeman = h_zeeman(molecular_parameters, basis, B_field)
+    ac_stark = h_ac(molecular_parameters, basis, I_laser, θ_laser, φ_laser)
     return Array(Hermitian(dc_stark + hf + zeeman + ac_stark))
 end
 
-function order_by_overlap_with(s::State, eigenvectors::Matrix)
-    i = state_to_index(s)
-    @assert i < size(eigenvectors, 1)
-    return sortslices(eigenvectors, dims=2, lt=(x,y)->isless(abs2(x[i]), abs2(y[i])), rev=true)
-end
 
-# Returns tuple (overlap, index)
-function max_overlap_with(s::State, eigenvectors::Matrix)
-    i = state_to_index(s)
-    n_states = size(eigenvectors, 1)
-    @assert i < n_states
-
-    findmax(
-        map(x -> abs2(x[i]), eachcol(eigenvectors))
-    )
-end
-
-function energy_difference(g::State, e::State, energies::Vector, eigenvectors::Matrix)
-    indices = map(x -> max_overlap_with(x, eigenvectors)[2], [e, g])
-    return mapreduce(x -> energies[x], -, indices)
-end
 
 end # module
