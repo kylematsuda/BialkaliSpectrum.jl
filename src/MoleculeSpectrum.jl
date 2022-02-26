@@ -5,6 +5,14 @@ using HalfIntegers
 using LinearAlgebra
 using SparseArrays
 
+module Constants
+    const μN = 7.622593285e-4 # MHz/G
+
+    const DToSI = 3.33564e-30
+    const h = 6.62607004e-34
+    const DVcm⁻¹ToMHz = (DToSI / h) * 1e-4
+end # module
+
 struct ZeemanParameters
     "Rotational g factor"
     gᵣ::Float64
@@ -57,16 +65,55 @@ const KRb_Parameters_Ospelkaus = MolecularParameters(0.574, 1113.9514, [HalfInt(
 const DEFAULT_MOLECULAR_PARAMETERS = KRb_Parameters_Neyenhuis
 
 struct SphericalVector
+    "Magnitude"
     magnitude::Float64
+    "Polar angle (rad)"
     θ::Float64
+    "Azimuthal angle (rad)"
     φ::Float64
+
+    function SphericalVector(magnitude, θ, φ)
+        if magnitude < 0
+            error("Magnitude must be nonnegative")
+        elseif θ < 0 || θ > π
+            error("Polar angle must be in [0, π]")
+        else
+            φr = rem2pi(φ, RoundDown)
+            if φr != φ
+                @warn "φ was provided outside of [0, 2π)"
+            end
+
+            return new(magnitude, θ, φr)
+        end
+    end
 end
 
+function Base.:-(sv::SphericalVector)
+    if sv.magnitude == 0
+        return sv
+    else
+        return SphericalVector(sv.magnitude, π - sv.θ, sv.φ + π)
+    end
+end
+
+VectorX(magnitude) = SphericalVector(magnitude, π/2, 0)
+VectorY(magnitude) = SphericalVector(magnitude, π/2, π/2)
+VectorZ(magnitude) = SphericalVector(magnitude, 0, 0)
+
 struct ExternalFields
+    "Magnetic field (G)"
     B::SphericalVector
+    "Electric field (V/cm)"
     E::SphericalVector
+    "Laser fields (W/cm^2)"
     Optical::Vector{SphericalVector}
 end
+
+const DEFAULT_FIELDS = ExternalFields(
+    VectorZ(545.9),
+    VectorZ(0.0),
+    []
+)
 
 struct State
     N::Int
@@ -272,17 +319,16 @@ end
 
 # no angle dependence for now
 function h_zeeman(molecular_parameters::MolecularParameters, basis::Vector{State}, B_field::Float64)
-    μ_N = 7.622593285e-4 # MHz/G
-
-    g_r = molecular_parameters.zeeman.gᵣ
-    (g_1, g_2) = molecular_parameters.zeeman.gᵢ
-    (σ_1, σ_2) = molecular_parameters.zeeman.σᵢ
+    μN = Constants.μN
+    gr = molecular_parameters.zeeman.gᵣ
+    (g1, g2) = molecular_parameters.zeeman.gᵢ
+    (σ1, σ2) = molecular_parameters.zeeman.σᵢ
 
     elts::Int = length(basis)
     H = spzeros(elts, elts)
     for i = 1:elts
         ket = basis[i]
-        H[i, i] = -g_r * μ_N * B_field * ket.mₙ - μ_N * B_field * dot([g_1*(1-σ_1), g_2*(1-σ_2)], ket.mᵢ)
+        H[i, i] = -gr * μN * B_field * ket.mₙ - μN * B_field * dot([g1*(1-σ1), g2*(1-σ2)], ket.mᵢ)
     end
     return H
 end
@@ -333,8 +379,7 @@ function h_ac(molecular_parameters::MolecularParameters, basis::Vector{State}, I
     return Hermitian(H)
 end
 
-
-function h(molecular_parameters::MolecularParameters, N_max::Int, ε::Float64, B_field::Float64, I_laser::Float64, θ_laser::Float64, φ_laser::Float64)
+function hamiltonian(molecular_parameters::MolecularParameters, N_max::Int, ε::Float64, B_field::Float64, I_laser::Float64, θ_laser::Float64, φ_laser::Float64)
     basis = generate_basis(molecular_parameters, N_max)
     
     B_rot = molecular_parameters.Bᵣ
@@ -346,6 +391,19 @@ function h(molecular_parameters::MolecularParameters, N_max::Int, ε::Float64, B
     return Array(Hermitian(dc_stark + hf + zeeman + ac_stark))
 end
 
+function hamiltonian(molecular_parameters::MolecularParameters, N_max::Int, external_fields::ExternalFields)
+    basis = generate_basis(molecular_parameters, N_max)
+    
+    B_rot = molecular_parameters.Bᵣ
+    ε = Constants.DVcm⁻¹ToMHz * external_fields.E.magnitude / B_rot
+    B_field = external_fields.B.magnitude
+    
+    dc_stark = B_rot * h_rot(basis, ε)
+    hf = h_quadrupole(molecular_parameters, basis) + h_nuclear_spin_spin(molecular_parameters, basis) + h_nuclear_spin_rotation(molecular_parameters, basis)
+    zeeman = h_zeeman(molecular_parameters, basis, B_field)
+    ac_stark = h_ac(molecular_parameters, basis, 0.0, 0.0, 0.0)
+    return Array(Hermitian(dc_stark + hf + zeeman + ac_stark))
+end
 
 
 end # module
