@@ -1,5 +1,5 @@
 rotation 0.028
-quadrupole 0.742
-spin spin 0.107
-spin rotation 0.526
+quadrupole 0.680
+spin spin 0.042
+spin rotation 0.170
 ac 0.041

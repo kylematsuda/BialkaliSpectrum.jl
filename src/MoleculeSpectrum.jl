@@ -111,7 +111,7 @@ function nuclear_spin_spin(bra::State, ket::State)::Float64
 
     deltas = δ(N, N′) * δ(mₙ, mₙ′) * δ(I_1, I_1′) * δ(I_2, I_2′)
 
-    if deltas
+    if deltas && (abs(mᵢ_1′-mᵢ_1) <= 1) && (abs(mᵢ_2′-mᵢ_2) <= 1)
         p_independent = (-1)^(I_1 + I_2 - mᵢ_1 - mᵢ_2) * sqrt(I_1 * (I_1 + 1) * (2*I_1 + 1)) * sqrt(I_2 * (I_2 + 1) * (2*I_2 + 1))
         p_dependent(p) = (-1)^p * WignerSymbols.wigner3j(I_1, 1, I_1, -mᵢ_1, p, mᵢ_1′) * WignerSymbols.wigner3j(I_2, 1, I_2, -mᵢ_2, -p, mᵢ_2′)
         return p_independent * mapreduce(p_dependent, +, -1:1)
@@ -129,7 +129,7 @@ function nuclear_spin_rotation(k::Int, bra::State, ket::State)::Float64
 
     deltas = δ(N, N′) * δ(I, I′) * other_nucleus
 
-    if deltas
+    if deltas && (abs(mₙ′-mₙ) <= 1) && (abs(mᵢ′-mᵢ) <= 1)
         p_independent = (-1)^(N + I - mₙ - mᵢ) * sqrt(N*(N+1)*(2*N + 1)) * sqrt(I*(I+1)*(2*I + 1))
         p_dependent(p) = (-1)^p * WignerSymbols.wigner3j(N, 1, N, -mₙ, p, mₙ′) * WignerSymbols.wigner3j(I, 1, I, -mᵢ, -p, mᵢ′)
         return p_independent * mapreduce(p_dependent, +, -1:1)
@@ -145,7 +145,7 @@ function h_quadrupole(basis::Vector{State})
 
     # Silke PRL
     # eqQ_2 = -1.41 # Rb, MHz
-    prefactors = [eqQ_1 / 4, eqQ_2 / 4]
+    # prefactors = [eqQ_1 / 4, eqQ_2 / 4]
 
     elts::Int = length(basis)
     H = zeros(elts, elts)
@@ -153,7 +153,8 @@ function h_quadrupole(basis::Vector{State})
         ket = basis[i]
         for j = i:elts
             bra = basis[j]
-            H[i, j] = dot(prefactors, [nuclear_quadrupole(k, bra, ket) for k in 1:2])
+            # H[i, j] = dot(prefactors, [nuclear_quadrupole(k, bra, ket) for k in 1:2])
+            H[i, j] = eqQ_1 * nuclear_quadrupole(1, bra, ket) + eqQ_2 * nuclear_quadrupole(2, bra, ket)
         end
     end
     return Hermitian(H)
