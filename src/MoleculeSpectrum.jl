@@ -57,13 +57,20 @@ end
 δ(i, j) = ==(i, j)
 δ(i::State, j::State) = δ(i.N, j.N) * δ(i.mₙ, j.mₙ) * δ(i.I, j.I) * δ(i.mᵢ, j.mᵢ)
 
+# Same as WignerSymbols.wigner3j(j, 1, j, -m, 0, m)
+WignerJ1J(j, m) = (-1)^(j-m) * m / sqrt(j*(j+1)*(2j+1))
+# Same as WignerSymbols.wigner3j(j, 2, j, -m, 0, m)
+WignerJ2J(j, m) = (-1)^(j-m) * 2 * (3m^2 - j*(j + 1)) / sqrt((2j - 1)*(2j)*(2j + 1)*(2j + 2)*(2j + 3))
+
 function dipole_matrix_element(p::Int, bra::State, ket::State)::Float64
     N, mₙ, mᵢ = bra.N, bra.mₙ, bra.mᵢ
     N′, mₙ′, mᵢ′ = ket.N, ket.mₙ, ket.mᵢ
 
-    hyperfine = δ(mᵢ, mᵢ′)
-    rotational = (-1)^mₙ * sqrt((2*N + 1)*(2*N′ + 1)) * WignerSymbols.wigner3j(N, 1, N′, -mₙ, p, mₙ′) * WignerSymbols.wigner3j(N, 1, N′, 0, 0, 0)
-    return hyperfine * rotational
+    if δ(mᵢ, mᵢ′) && (-mₙ + p + mₙ′ == 0)
+        return (-1)^mₙ * sqrt((2N+1)*(2N′+1)) * WignerSymbols.wigner3j(N, 1, N′, -mₙ, p, mₙ′) * WignerSymbols.wigner3j(N, 1, N′, 0, 0, 0)
+    else
+        return 0
+    end
 end
 
 rotation_matrix_element(bra::State, ket::State)::Float64 = ket.N * (ket.N + 1) * δ(bra, ket) 
@@ -88,11 +95,14 @@ function nuclear_quadrupole(k::Int, bra::State, ket::State)::Float64
     other = (k % 2) + 1 # States of other nucleus should Kronecker delta
     other_nucleus = δ(bra.I[other], ket.I[other]) * δ(bra.mᵢ[other], ket.mᵢ[other])
 
-    # Brown and Carrington pg. 477
-    p_independent = other_nucleus * δ(I,I′) * (-1)^(I - mᵢ - mₙ) * sqrt(2*N + 1) * sqrt(2*N′ + 1) * WignerSymbols.wigner3j(N, 2, N′, 0, 0, 0) / WignerSymbols.wigner3j(I, 2, I, -I, 0, I)
-    p_dependent(p) = (-1)^(p) * WignerSymbols.wigner3j(N, 2, N′, -mₙ, p, mₙ′) * WignerSymbols.wigner3j(I, 2, I, -mᵢ, -p, mᵢ′)
-
-    return p_independent * mapreduce(p_dependent, +, -2:2)
+    if other_nucleus && δ(I,I′) && (abs(mₙ′-mₙ) <= 2) && (abs(mᵢ′-mᵢ) <= 2) && (δ(N,N′) || (abs(N-N′) == 2))
+        # Brown and Carrington pg. 477
+        p_independent =  (-1)^(I - mᵢ - mₙ) * sqrt(2*N + 1) * sqrt(2*N′ + 1) * WignerSymbols.wigner3j(N, 2, N′, 0, 0, 0) / WignerJ2J(I, I)
+        p_dependent(p) = (-1)^(p) * WignerSymbols.wigner3j(N, 2, N′, -mₙ, p, mₙ′) * WignerSymbols.wigner3j(I, 2, I, -mᵢ, -p, mᵢ′)
+        return p_independent * mapreduce(p_dependent, +, -2:2)
+    else
+        return 0.0
+    end
 end
 
 function nuclear_spin_spin(bra::State, ket::State)::Float64
@@ -100,10 +110,14 @@ function nuclear_spin_spin(bra::State, ket::State)::Float64
     N′, mₙ′, (I_1′, I_2′), (mᵢ_1′, mᵢ_2′) = ket.N, ket.mₙ, ket.I, ket.mᵢ
 
     deltas = δ(N, N′) * δ(mₙ, mₙ′) * δ(I_1, I_1′) * δ(I_2, I_2′)
-    p_independent = (-1)^(I_1 + I_2 - mᵢ_1 - mᵢ_2) * sqrt(I_1 * (I_1 + 1) * (2*I_1 + 1)) * sqrt(I_2 * (I_2 + 1) * (2*I_2 + 1))
-    p_dependent(p) = (-1)^p * WignerSymbols.wigner3j(I_1, 1, I_1, -mᵢ_1, p, mᵢ_1′) * WignerSymbols.wigner3j(I_2, 1, I_2, -mᵢ_2, -p, mᵢ_2′)
 
-    return deltas * p_independent * mapreduce(p_dependent, +, -1:1)
+    if deltas
+        p_independent = (-1)^(I_1 + I_2 - mᵢ_1 - mᵢ_2) * sqrt(I_1 * (I_1 + 1) * (2*I_1 + 1)) * sqrt(I_2 * (I_2 + 1) * (2*I_2 + 1))
+        p_dependent(p) = (-1)^p * WignerSymbols.wigner3j(I_1, 1, I_1, -mᵢ_1, p, mᵢ_1′) * WignerSymbols.wigner3j(I_2, 1, I_2, -mᵢ_2, -p, mᵢ_2′)
+        return p_independent * mapreduce(p_dependent, +, -1:1)
+    else
+        return 0.0
+    end
 end
 
 function nuclear_spin_rotation(k::Int, bra::State, ket::State)::Float64
@@ -114,19 +128,23 @@ function nuclear_spin_rotation(k::Int, bra::State, ket::State)::Float64
     other_nucleus = δ(bra.I[other], ket.I[other]) * δ(bra.mᵢ[other], ket.mᵢ[other])
 
     deltas = δ(N, N′) * δ(I, I′) * other_nucleus
-    p_independent = (-1)^(N + I - mₙ - mᵢ) * sqrt(N*(N+1)*(2*N + 1)) * sqrt(I*(I+1)*(2*I + 1))
-    p_dependent(p) = (-1)^p * WignerSymbols.wigner3j(N, 1, N, -mₙ, p, mₙ′) * WignerSymbols.wigner3j(I, 1, I, -mᵢ, -p, mᵢ′)
-    
-    return deltas * p_independent * mapreduce(p_dependent, +, -1:1)
+
+    if deltas
+        p_independent = (-1)^(N + I - mₙ - mᵢ) * sqrt(N*(N+1)*(2*N + 1)) * sqrt(I*(I+1)*(2*I + 1))
+        p_dependent(p) = (-1)^p * WignerSymbols.wigner3j(N, 1, N, -mₙ, p, mₙ′) * WignerSymbols.wigner3j(I, 1, I, -mᵢ, -p, mᵢ′)
+        return p_independent * mapreduce(p_dependent, +, -1:1)
+    else
+        return 0
+    end
 end
 
 function h_quadrupole(basis::Vector{State})
     # Neyenhuis PRL
     eqQ_1 = 0.45 # K, MHz
-    # eqQ_2 = -1.308 # Rb, MHz
+    eqQ_2 = -1.308 # Rb, MHz
 
     # Silke PRL
-    eqQ_2 = -1.41 # Rb, MHz
+    # eqQ_2 = -1.41 # Rb, MHz
     prefactors = [eqQ_1 / 4, eqQ_2 / 4]
 
     elts::Int = length(basis)
@@ -212,10 +230,13 @@ function tensor_polarizability(bra::State, ket::State, T2ϵϵ)
     N, mₙ = bra.N, bra.mₙ
     mₙ′ = ket.mₙ
 
-    p_independent = deltas * sqrt(6) * (-1)^(mₙ) * (2*N + 1) * WignerSymbols.wigner3j(N, 2, N, 0, 0, 0)
-    p_dependent(p) = (-1)^p * T2ϵϵ[p+3] * WignerSymbols.wigner3j(N, 2, N, -mₙ, -p, mₙ′)
-
-    return p_independent * mapreduce(p_dependent, +, -2:2)
+    if deltas
+        p_independent = sqrt(6) * (-1)^(mₙ) * (2*N + 1) * WignerSymbols.wigner3j(N, 2, N, 0, 0, 0)
+        p_dependent(p) = (-1)^p * T2ϵϵ[p+3] * WignerSymbols.wigner3j(N, 2, N, -mₙ, -p, mₙ′)
+        return p_independent * mapreduce(p_dependent, +, -2:2)
+    else
+        return 0
+    end
 end
 
 function h_ac(basis::Vector{State}, I_laser::Float64, θ_laser::Float64, φ_laser::Float64)
@@ -237,12 +258,16 @@ function h_ac(basis::Vector{State}, I_laser::Float64, θ_laser::Float64, φ_lase
     return Hermitian(H)
 end
 
-function h(N_max::Int, ε::Float64, B_field::Float64, I_laser::Float64, θ_laser::Float64, φ_laser::Float64)
-    # B_rot = 1113.9514 # Neyenhuis PRL
-    B_rot = 1113.950 # Silke PRL
-
+function generate_basis(N_max::Int)
     n_elts::Int = (N_max + 1)^2 * N_Hyperfine
-    basis = map(index_to_state, 1:n_elts)
+    return map(index_to_state, 1:n_elts)
+end
+
+function h(N_max::Int, ε::Float64, B_field::Float64, I_laser::Float64, θ_laser::Float64, φ_laser::Float64)
+    B_rot = 1113.9514 # Neyenhuis PRL
+    # B_rot = 1113.950 # Silke PRL
+
+    basis = generate_basis(N_max)
 
     dc_stark = B_rot * h_rot(basis, ε)
     hf = h_quadrupole(basis) + h_nuclear_spin_spin(basis) + h_nuclear_spin_rotation(basis)
@@ -266,6 +291,11 @@ function max_overlap_with(s::State, eigenvectors::Matrix)
     findmax(
         map(x -> abs2(x[i]), eachcol(eigenvectors))
     )
+end
+
+function energy_difference(g::State, e::State, energies::Vector, eigenvectors::Matrix)
+    indices = map(x -> max_overlap_with(x, eigenvectors)[2], [e, g])
+    return mapreduce(x -> energies[x], -, indices)
 end
 
 end # module
