@@ -1,17 +1,18 @@
+__precompile__(false)
+
 using Pkg
 Pkg.add("WignerSymbols")
 Pkg.add("HalfIntegers")
-Pkg.add("SphericalHarmonics")
 
 module MoleculeSpectrum
 
 using WignerSymbols
 using HalfIntegers
-using SphericalHarmonics
 using LinearAlgebra
+using SparseArrays
 
-I_K = HalfInt(4) # K
-I_Rb = HalfInt(3/2) # Rb
+const I_K = HalfInt(4) # K
+const I_Rb = HalfInt(3/2) # Rb
 
 struct State
     N::Int
@@ -26,7 +27,7 @@ State(N, mₙ, mᵢ₁::Number, mᵢ₂::Number) = State(N, mₙ, [I_K I_Rb], [H
 n_hyperfine(I::HalfIntegers.HalfInt) = 2 * I + 1
 n_hyperfine(s::State) = mapreduce(n_hyperfine, *, s.I)
 
-N_Hyperfine = n_hyperfine(I_K) * n_hyperfine(I_Rb)
+const N_Hyperfine = n_hyperfine(I_K) * n_hyperfine(I_Rb)
 
 m_F(s::State) = reduce(+, s.mᵢ) + s.mₙ
 
@@ -77,7 +78,7 @@ rotation_matrix_element(bra::State, ket::State)::Float64 = ket.N * (ket.N + 1) *
 
 function h_rot(basis::Vector{State}, ε::Float64)
     elts::Int = length(basis)
-    H = zeros(elts, elts)
+    H = spzeros(elts, elts)
     for i = 1:elts
         ket = basis[i]
         for j = i:elts
@@ -95,7 +96,11 @@ function nuclear_quadrupole(k::Int, bra::State, ket::State)::Float64
     other = (k % 2) + 1 # States of other nucleus should Kronecker delta
     other_nucleus = δ(bra.I[other], ket.I[other]) * δ(bra.mᵢ[other], ket.mᵢ[other])
 
-    if other_nucleus && δ(I,I′) && (abs(mₙ′-mₙ) <= 2) && (abs(mᵢ′-mᵢ) <= 2) && (δ(N,N′) || (abs(N-N′) == 2))
+    if other_nucleus &&
+        δ(I,I′) && (δ(N,N′) || (abs(N-N′) == 2)) &&
+        (mₙ′- mₙ == mᵢ - mᵢ′) &&
+        (abs(mₙ′-mₙ) <= 2) && (abs(mᵢ′-mᵢ) <= 2)
+
         # Brown and Carrington pg. 477
         p_independent =  (-1)^(I - mᵢ - mₙ) * sqrt(2*N + 1) * sqrt(2*N′ + 1) * WignerSymbols.wigner3j(N, 2, N′, 0, 0, 0) / WignerJ2J(I, I)
         p_dependent(p) = (-1)^(p) * WignerSymbols.wigner3j(N, 2, N′, -mₙ, p, mₙ′) * WignerSymbols.wigner3j(I, 2, I, -mᵢ, -p, mᵢ′)
@@ -111,7 +116,7 @@ function nuclear_spin_spin(bra::State, ket::State)::Float64
 
     deltas = δ(N, N′) * δ(mₙ, mₙ′) * δ(I_1, I_1′) * δ(I_2, I_2′)
 
-    if deltas && (abs(mᵢ_1′-mᵢ_1) <= 1) && (abs(mᵢ_2′-mᵢ_2) <= 1)
+    if deltas
         p_independent = (-1)^(I_1 + I_2 - mᵢ_1 - mᵢ_2) * sqrt(I_1 * (I_1 + 1) * (2*I_1 + 1)) * sqrt(I_2 * (I_2 + 1) * (2*I_2 + 1))
         p_dependent(p) = (-1)^p * WignerSymbols.wigner3j(I_1, 1, I_1, -mᵢ_1, p, mᵢ_1′) * WignerSymbols.wigner3j(I_2, 1, I_2, -mᵢ_2, -p, mᵢ_2′)
         return p_independent * mapreduce(p_dependent, +, -1:1)
@@ -129,7 +134,7 @@ function nuclear_spin_rotation(k::Int, bra::State, ket::State)::Float64
 
     deltas = δ(N, N′) * δ(I, I′) * other_nucleus
 
-    if deltas && (abs(mₙ′-mₙ) <= 1) && (abs(mᵢ′-mᵢ) <= 1)
+    if deltas && (mₙ′ - mₙ == mᵢ - mᵢ′)
         p_independent = (-1)^(N + I - mₙ - mᵢ) * sqrt(N*(N+1)*(2*N + 1)) * sqrt(I*(I+1)*(2*I + 1))
         p_dependent(p) = (-1)^p * WignerSymbols.wigner3j(N, 1, N, -mₙ, p, mₙ′) * WignerSymbols.wigner3j(I, 1, I, -mᵢ, -p, mᵢ′)
         return p_independent * mapreduce(p_dependent, +, -1:1)
@@ -145,16 +150,15 @@ function h_quadrupole(basis::Vector{State})
 
     # Silke PRL
     # eqQ_2 = -1.41 # Rb, MHz
-    # prefactors = [eqQ_1 / 4, eqQ_2 / 4]
 
     elts::Int = length(basis)
-    H = zeros(elts, elts)
+    H = spzeros(elts, elts)
+
     for i = 1:elts
         ket = basis[i]
         for j = i:elts
             bra = basis[j]
-            # H[i, j] = dot(prefactors, [nuclear_quadrupole(k, bra, ket) for k in 1:2])
-            H[i, j] = eqQ_1 * nuclear_quadrupole(1, bra, ket) + eqQ_2 * nuclear_quadrupole(2, bra, ket)
+            H[i, j] = (1/4) * (eqQ_1 * nuclear_quadrupole(1, bra, ket) + eqQ_2 * nuclear_quadrupole(2, bra, ket))
         end
     end
     return Hermitian(H)
@@ -164,7 +168,7 @@ function h_nuclear_spin_spin(basis::Vector{State})
     c4 = -2030.4e-6 # MHz, Aldegunde PRA 78, 033434 (2008)
 
     elts::Int = length(basis)
-    H = zeros(elts, elts)
+    H = spzeros(elts, elts)
     for i = 1:elts
         ket = basis[i]
         for j = i:elts
@@ -179,15 +183,14 @@ function h_nuclear_spin_rotation(basis::Vector{State})
     # MHz, from Aldegunde PRA
     cK = -24.1e-6
     cRb = 420.1e-6
-    prefactors = [cK, cRb]
 
     elts::Int = length(basis)
-    H = zeros(elts, elts)
+    H = spzeros(elts, elts)
     for i = 1:elts
         ket = basis[i]
         for j = i:elts
             bra = basis[j]
-            H[i, j] = dot(prefactors,[nuclear_spin_rotation(k, bra, ket) for k in 1:2])
+            H[i, j] = cK * nuclear_spin_rotation(1, bra, ket) + cRb * nuclear_spin_rotation(2, bra, ket)
         end
     end
     return Hermitian(H)
@@ -205,7 +208,7 @@ function h_zeeman(basis::Vector{State}, B_field::Float64)
     σ_2 = 3469e-6
 
     elts::Int = length(basis)
-    H = zeros(elts, elts)
+    H = spzeros(elts, elts)
     for i = 1:elts
         ket = basis[i]
         H[i, i] = -g_r * μ_N * B_field * ket.mₙ - μ_N * B_field * dot([g_1*(1-σ_1), g_2*(1-σ_2)], ket.mᵢ)
@@ -231,8 +234,8 @@ function tensor_polarizability(bra::State, ket::State, T2ϵϵ)
     N, mₙ = bra.N, bra.mₙ
     mₙ′ = ket.mₙ
 
-    if deltas
-        p_independent = sqrt(6) * (-1)^(mₙ) * (2*N + 1) * WignerSymbols.wigner3j(N, 2, N, 0, 0, 0)
+    if deltas && (N > 0) && (abs(mₙ′-mₙ) <= 2)
+        p_independent = sqrt(6) * (-1)^(mₙ) * (2*N + 1) * WignerJ2J(N, 0)
         p_dependent(p) = (-1)^p * T2ϵϵ[p+3] * WignerSymbols.wigner3j(N, 2, N, -mₙ, -p, mₙ′)
         return p_independent * mapreduce(p_dependent, +, -2:2)
     else
@@ -246,7 +249,7 @@ function h_ac(basis::Vector{State}, I_laser::Float64, θ_laser::Float64, φ_lase
     T2ϵϵ = T2pol(θ_laser, φ_laser)
 
     elts::Int = length(basis)
-    H = zeros(elts, elts)
+    H = spzeros(elts, elts)
     for i = 1:elts
         ket = basis[i]
         for j = i:elts
@@ -274,7 +277,7 @@ function h(N_max::Int, ε::Float64, B_field::Float64, I_laser::Float64, θ_laser
     hf = h_quadrupole(basis) + h_nuclear_spin_spin(basis) + h_nuclear_spin_rotation(basis)
     zeeman = h_zeeman(basis, B_field)
     ac_stark = h_ac(basis, I_laser, θ_laser, φ_laser)
-    return dc_stark + hf + zeeman + ac_stark
+    return Array(Hermitian(dc_stark + hf + zeeman + ac_stark))
 end
 
 function order_by_overlap_with(s::State, eigenvectors::Matrix)

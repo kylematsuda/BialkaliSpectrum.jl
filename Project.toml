@@ -2,3 +2,7 @@ name = "MoleculeSpectrum"
 uuid = "35893526-f1dd-48d2-8180-97f6707ed43b"
 authors = ["kylematsuda <kyle.matsuda@colorado.edu>"]
 version = "0.1.0"
+
+[deps]
+HalfIntegers = "f0d1745a-41c9-11e9-1dd9-e5d34d218721"
+WignerSymbols = "9f57e263-0b3d-5e2e-b1be-24f2bb48858b"
