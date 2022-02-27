@@ -6,4 +6,5 @@ Compute the energy levels of diatomic ${}^{1} \Sigma$ molecules in magnetic, ele
 - [ ] Add transition strengths
 - [ ] Dump to file
 - [ ] Graphing
-- [ ] Improve code organization
+- [x] Improve code organization
+- [ ] Documentation
