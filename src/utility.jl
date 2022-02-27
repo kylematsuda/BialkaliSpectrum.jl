@@ -16,9 +16,6 @@ function index_to_state(i::Int, I₁::HalfInt, I₂::HalfInt)::State
     return State(N, mₙ, I₁, m_1, I₂, m_2)
 end
 
-# TODO fix this!!!
-# index_to_state(i::Int) = index_to_state(i, DEFAULT_MOLECULAR_PARAMETERS.I[1], DEFAULT_MOLECULAR_PARAMETERS.I[2])
-
 # Todo: test for state_to_index(index_to_state(x)) == x
 function state_to_index(s::State)::Int
     rotation = (s.N^2 + 1) + (s.N + s.mₙ)
