@@ -59,6 +59,7 @@ Base.:-(uv::SphericalUnitVector) = SphericalUnitVector(π - uv.θ, uv.φ + π)
 UnitVectorX() = SphericalUnitVector(π/2, 0)
 UnitVectorY() = SphericalUnitVector(π/2, π/2)
 UnitVectorZ() = SphericalUnitVector(0, 0)
+Unpolarized() = SphericalUnitVector(acos(1/sqrt(3)), π/4)
 
 function T⁽¹⁾(v::SphericalUnitVector)::SVector{3, ComplexF64}
     θ = v.θ

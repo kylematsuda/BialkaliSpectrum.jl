@@ -27,29 +27,29 @@ function state_to_index(s::State)::Int
     return 1 + (rotation - 1) * N_Hyperfine + hyperfine
 end
 
-function order_by_overlap_with(s::State, eigenvectors::Matrix)
+function order_by_overlap_with(s::State, eigenstates::Matrix)
     i = state_to_index(s)
-    @assert i < size(eigenvectors, 1)
-    return sortslices(eigenvectors, dims=2, lt=(x,y)->isless(abs2(x[i]), abs2(y[i])), rev=true)
+    @assert i < size(eigenstates, 1)
+    return sortslices(eigenstates, dims=2, lt=(x,y)->isless(abs2(x[i]), abs2(y[i])), rev=true)
 end
 
 # Returns tuple (overlap, index)
-function max_overlap_with(s::State, eigenvectors::Matrix)
+function max_overlap_with(s::State, eigenstates::Matrix)
     i = state_to_index(s)
-    n_states = size(eigenvectors, 1)
+    n_states = size(eigenstates, 1)
     @assert i < n_states
 
     findmax(
-        map(x -> abs2(x[i]), eachcol(eigenvectors))
+        map(x -> abs2(x[i]), eachcol(eigenstates))
     )
 end
 
-function get_energy(s::State, energies::Vector, eigenvectors::Matrix)
-    return energies[max_overlap_with(s, eigenvectors)[2]]
+function get_energy(s::State, energies::Vector, eigenstates::Matrix)
+    return energies[max_overlap_with(s, eigenstates)[2]]
 end
 
-function get_energy_difference(g::State, e::State, energies::Vector, eigenvectors::Matrix)
-    return mapreduce(x -> get_energy(x, energies, eigenvectors), -, [e, g])
+function get_energy_difference(g::State, e::State, energies::Vector, eigenstates::Matrix)
+    return mapreduce(x -> get_energy(x, energies, eigenstates), -, [e, g])
 end
 
 function generate_basis(molecular_parameters::MolecularParameters, N_max::Int)

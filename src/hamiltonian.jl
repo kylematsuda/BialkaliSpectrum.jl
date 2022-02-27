@@ -92,6 +92,7 @@ end
 struct HamiltonianParts
     rotation
     dipole::SVector{3}
+    dipole_relative::SVector{3} # used for transition strengths
     hyperfine
     zeeman::SVector{3}
     ac_scalar
@@ -102,12 +103,13 @@ function make_hamiltonian_parts(molecular_parameters::MolecularParameters, N_max
     basis = generate_basis(molecular_parameters, N_max)
 
     rotation = molecular_parameters.Bᵣ * h_rotation(basis)
+    dipole_relative = h_dipole(basis)
     dipole = (-1) * molecular_parameters.dₚ * Constants.DVcm⁻¹ToMHz * h_dipole(basis)
     hyperfine = make_hyperfine(molecular_parameters, basis)
     zeeman = make_zeeman(molecular_parameters, basis)
     (ac_scalar, ac_tensor) = make_ac(molecular_parameters, basis)
 
-    return HamiltonianParts(rotation, dipole, hyperfine, zeeman, ac_scalar, ac_tensor)
+    return HamiltonianParts(rotation, dipole, dipole_relative, hyperfine, zeeman, ac_scalar, ac_tensor)
 end
 
 function hamiltonian(parts::HamiltonianParts, external_fields::ExternalFields)
