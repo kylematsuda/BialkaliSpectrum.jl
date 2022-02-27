@@ -169,9 +169,12 @@ struct ExternalFields
     E::SphericalVector
     "Laser fields (W/cm^2)"
     Optical::Vector{SphericalVector}
+
+    ExternalFields(B::SphericalVector, E::SphericalVector, Optical) = new(B, E, Optical)
 end
 
-const DEFAULT_FIELDS = ExternalFields(VectorZ(545.9), VectorZ(0.0), [])
+ExternalFields(B::Float64, E::Float64) = ExternalFields(VectorZ(B), VectorZ(E), [])
+const DEFAULT_FIELDS = ExternalFields(545.9, 0.0)
 
 struct State
     N::Int
@@ -661,7 +664,7 @@ end
 @testset "Reproduces Ospelkaus et al., PRL 104, 030402 (2010)" begin
     tolerance = 0.0015 # MHz
 
-    fields = ExternalFields(VectorZ(545.9), VectorZ(0.0), [])
+    fields = ExternalFields(545.9, 0.0)
     h = hamiltonian(KRb_Parameters_Ospelkaus, 5, fields)
     energies = eigvals(h)
     states = eigvecs(h)
@@ -677,6 +680,29 @@ end
         ((0, 0, -4, 1/2), (1, 0, -4, -1/2), 2228.805),
         ((0, 0, -4, 3/2), (1, 0, -4, 3/2),  2227.761),
         ((0, 0, -3, 1/2), (1, 0, -3, 1/2),  2228.091),
+    ]
+
+    for c in comparisons
+        (g, e) = map(i -> State(c[i]...), 1:2)
+        transition = energy_difference(g, e, energies, states)
+        expected = c[3]
+
+        @test abs(transition - expected) < tolerance
+    end
+end
+
+@testset "Reproduces Neyenhuis et al., PRL 109, 230403 (2012)" begin
+    tolerance = 0.005 # MHz
+
+    fields = ExternalFields(545.9, 0.0)
+    h = hamiltonian(KRb_Parameters_Neyenhuis, 5, fields)
+    energies = eigvals(h)
+    states = eigvecs(h)
+
+    comparisons = [
+        ((0, 0, -4, 1/2), (1, 1, -4, 1/2),  2227.842),
+        ((0, 0, -4, 1/2), (1, 0, -4, 1/2),  2228.110),
+        ((0, 0, -4, 1/2), (1, -1, -4, 1/2), 2227.784),
     ]
 
     for c in comparisons
