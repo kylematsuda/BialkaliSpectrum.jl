@@ -65,18 +65,25 @@ function transition_strengths(spectrum::Spectrum, g::State, f_low, f_high; polar
     eigenstates = spectrum.eigenstates
     energies = spectrum.energies
 
-    (overlap, index_g) = max_overlap_with(g, eigenstates)
+    (overlap, index_g) = max_overlap_with(spectrum, g)
     if overlap < 0.5
         @warn "The best overlap with your requested ground state is < 0.5."
     end
     E_g = energies[index_g]
-    state_range = (searchsortedfirst(energies, f_low + E_g), searchsortedlast(energies, f_high + E_g))
+    g_state = eigenstates[:, index_g]
+
+    state_range = searchsortedfirst(energies, f_low + E_g):searchsortedlast(energies, f_high + E_g)
+    states = [eigenstates[:, k] for k in state_range]
+    frequencies = [energies[k] - E_g for k in state_range]
 
     T1ϵ = T⁽¹⁾(polarization)
     h_dipole = tensor_dot(T1ϵ, spectrum.hamiltonian_parts.dipole_relative) / sqrt(3)
 
-    transitions = [(energies[k] - E_g, abs(eigenstates[:, index_g]' * h_dipole * eigenstates[:, k])) for k in state_range[1]:state_range[2]]
-    return sort!(transitions, by=t->t[2], rev=true)
+    strengths = [abs(g_state' * h_dipole * e) for e in states]
+    closest_basis_states = map(e -> find_closest_basis_state(spectrum, e), state_range)
+    
+    out = [x for x in zip(frequencies, strengths, closest_basis_states)]
+    return sort!(out, by=t->t[2], rev=true)
 end
 
 end # module

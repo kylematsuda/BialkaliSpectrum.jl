@@ -50,7 +50,8 @@ function get_energy_difference(spectrum::Spectrum, g::State, e::State)
     return mapreduce(x -> get_energy(spectrum, x), -, [e, g])
 end
 
-function find_closest_basis_state(spectrum::Spectrum, state::State)
+function find_closest_basis_state(spectrum::Spectrum, index)
+    state = spectrum.eigenstates[:, index]
     weights = map(abs2, state)
     index = findmax(weights)[2]
     return spectrum.hamiltonian_parts.basis[index]
