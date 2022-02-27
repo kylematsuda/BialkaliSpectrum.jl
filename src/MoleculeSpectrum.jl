@@ -283,20 +283,6 @@ end
 
 rotation_matrix_element(bra::State, ket::State)::Float64 = ket.N * (ket.N + 1) * δ(bra, ket)
 
-# # TODO: remove
-# function h_rot(basis::Vector{State}, ε::Float64)
-#     elts::Int = length(basis)
-#     H = spzeros(elts, elts)
-#     for i = 1:elts
-#         ket = basis[i]
-#         for j = i:elts
-#             bra = basis[j]
-#             H[i, j] = rotation_matrix_element(bra, ket) + ε * dipole_matrix_element(0, bra, ket)
-#         end
-#     end
-#     return Hermitian(H)
-# end
-
 function h_rotation(basis::Vector{State})
     return Diagonal(map(x -> rotation_matrix_element(x, x), basis))
 end
@@ -395,22 +381,6 @@ function h_nuclear_spin_spin(basis::Vector{State})
     return Hermitian(H)
 end
 
-
-# function h_nuclear_spin_spin(molecular_parameters::MolecularParameters, basis::Vector{State})
-#     c4 = molecular_parameters.nuclear.c₄
-
-#     elts::Int = length(basis)
-#     H = spzeros(elts, elts)
-#     for i = 1:elts
-#         ket = basis[i]
-#         for j = i:elts
-#             bra = basis[j]
-#             H[i, j] = c4 * nuclear_spin_spin(bra, ket)
-#         end
-#     end
-#     return Hermitian(H)
-# end
-
 function nuclear_spin_rotation(k::Int, bra::State, ket::State)::Float64
     N, mₙ, I, mᵢ = bra.N, bra.mₙ, bra.I[k], bra.mᵢ[k]
     N′, mₙ′, I′, mᵢ′ = ket.N, ket.mₙ, ket.I[k], ket.mᵢ[k]
@@ -429,38 +399,6 @@ function nuclear_spin_rotation(k::Int, bra::State, ket::State)::Float64
     end
 end
 
-# function h_quadrupole(molecular_parameters::MolecularParameters, basis::Vector{State})
-#     (eqQ_1, eqQ_2) = molecular_parameters.nuclear.eqQᵢ
-
-#     elts::Int = length(basis)
-#     H = spzeros(elts, elts)
-
-#     for i = 1:elts
-#         ket = basis[i]
-#         for j = i:elts
-#             bra = basis[j]
-#             H[i, j] = (1/4) * (eqQ_1 * nuclear_quadrupole(1, bra, ket) + eqQ_2 * nuclear_quadrupole(2, bra, ket))
-#         end
-#     end
-#     return Hermitian(H)
-# end
-
-
-# function h_nuclear_spin_rotation(molecular_parameters::MolecularParameters, basis::Vector{State})
-#     (c1, c2) = molecular_parameters.nuclear.cᵢ
-
-#     elts::Int = length(basis)
-#     H = spzeros(elts, elts)
-#     for i = 1:elts
-#         ket = basis[i]
-#         for j = i:elts
-#             bra = basis[j]
-#             H[i, j] = c1 * nuclear_spin_rotation(1, bra, ket) + c2 * nuclear_spin_rotation(2, bra, ket)
-#         end
-#     end
-#     return Hermitian(H)
-# end
-
 function h_nuclear_spin_rotation(k::Int, basis::Vector{State})
     elts::Int = length(basis)
     H = spzeros(elts, elts)
@@ -473,22 +411,6 @@ function h_nuclear_spin_rotation(k::Int, basis::Vector{State})
     end
     return Hermitian(H)
 end
-
-# # no angle dependence for now
-# function h_zeeman(molecular_parameters::MolecularParameters, basis::Vector{State}, B_field::Float64)
-#     μN = Constants.μN
-#     gr = molecular_parameters.zeeman.gᵣ
-#     (g1, g2) = molecular_parameters.zeeman.gᵢ
-#     (σ1, σ2) = molecular_parameters.zeeman.σᵢ
-
-#     elts::Int = length(basis)
-#     H = spzeros(elts, elts)
-#     for i = 1:elts
-#         ket = basis[i]
-#         H[i, i] = -gr * μN * B_field * ket.mₙ - μN * B_field * dot([g1*(1-σ1), g2*(1-σ2)], ket.mᵢ)
-#     end
-#     return H
-# end
 
 function h_zeeman_rotation(basis::Vector{State}, B_n::SphericalUnitVector)
     T⁽¹⁾B = T⁽¹⁾(B_n)
@@ -602,18 +524,6 @@ function h_ac_tensor(basis::Vector{State}, ϵ::SphericalUnitVector)
     end
     return Hermitian(H)
 end
-
-# function hamiltonian(molecular_parameters::MolecularParameters, N_max::Int, ε::Float64, B_field::Float64, I_laser::Float64, θ_laser::Float64, φ_laser::Float64)
-#     basis = generate_basis(molecular_parameters, N_max)
-    
-#     B_rot = molecular_parameters.Bᵣ
-    
-#     dc_stark = B_rot * h_rot(basis, ε)
-#     hf = h_quadrupole(molecular_parameters, basis) + h_nuclear_spin_spin(molecular_parameters, basis) + h_nuclear_spin_rotation(molecular_parameters, basis)
-#     zeeman = h_zeeman(molecular_parameters, basis, B_field)
-#     ac_stark = h_ac(molecular_parameters, basis, I_laser, θ_laser, φ_laser)
-#     return Array(Hermitian(dc_stark + hf + zeeman + ac_stark))
-# end
 
 function hamiltonian(molecular_parameters::MolecularParameters, N_max::Int, external_fields::ExternalFields)
     basis = generate_basis(molecular_parameters, N_max)
