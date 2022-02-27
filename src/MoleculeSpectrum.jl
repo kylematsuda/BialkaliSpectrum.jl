@@ -4,6 +4,7 @@ using WignerSymbols
 using HalfIntegers
 using LinearAlgebra
 using SparseArrays
+using StaticArrays
 
 using Test
 
@@ -18,16 +19,16 @@ struct ZeemanParameters
     "Rotational g factor"
     gᵣ::Float64
     "Nuclear g factor"
-    gᵢ::Array{Float64}
+    gᵢ::SVector{2, Float64}
     "Nuclear shielding factor"
-    σᵢ::Array{Float64}
+    σᵢ::SVector{2, Float64}
 end
 
 struct NuclearParameters
     "Nuclear electric quadrupole (MHz)"
-    eqQᵢ::Array{Float64}
+    eqQᵢ::SVector{2, Float64}
     "Nuclear spin-rotation interaction (MHz)"
-    cᵢ::Array{Float64}
+    cᵢ::SVector{2, Float64}
     "Nuclear spin-spin scalar interaction (MHz)"
     c₄::Float64
 end
@@ -45,7 +46,7 @@ struct MolecularParameters
     "Rotational constant (MHz)"
     Bᵣ::Float64
     "Nuclear angular momenta"
-    I::Array{HalfInt}
+    I::SVector{2, HalfInt}
     "Zeeman parameters"
     zeeman::ZeemanParameters
     "Nuclear Parameters"
@@ -54,14 +55,14 @@ struct MolecularParameters
     α::Polarizability
 end
 
-const KRb_Zeeman = ZeemanParameters(0.014, [-0.324 1.834], [1321e-6 3469e-6])
+const KRb_Zeeman = ZeemanParameters(0.014, [-0.324, 1.834], [1321e-6, 3469e-6])
 const KRb_Polarizability = Polarizability(10.0e-5, 3.3e-5)
 
-const KRb_Nuclear_Neyenhuis = NuclearParameters([0.45 -1.308], [-24.1e-6 420.1e-6], -2030.4e-6)
-const KRb_Nuclear_Ospelkaus = NuclearParameters([0.45 -1.41], [-24.1e-6 420.1e-6], -2030.4e-6)
+const KRb_Nuclear_Neyenhuis = NuclearParameters([0.45, -1.308], [-24.1e-6, 420.1e-6], -2030.4e-6)
+const KRb_Nuclear_Ospelkaus = NuclearParameters([0.45, -1.41], [-24.1e-6, 420.1e-6], -2030.4e-6)
 
-const KRb_Parameters_Neyenhuis = MolecularParameters(0.574, 1113.9514, [HalfInt(4) HalfInt(3/2)], KRb_Zeeman, KRb_Nuclear_Neyenhuis, KRb_Polarizability)
-const KRb_Parameters_Ospelkaus = MolecularParameters(0.574, 1113.950, [HalfInt(4) HalfInt(3/2)], KRb_Zeeman, KRb_Nuclear_Ospelkaus, KRb_Polarizability)
+const KRb_Parameters_Neyenhuis = MolecularParameters(0.574, 1113.9514, [HalfInt(4), HalfInt(3/2)], KRb_Zeeman, KRb_Nuclear_Neyenhuis, KRb_Polarizability)
+const KRb_Parameters_Ospelkaus = MolecularParameters(0.574, 1113.950, [HalfInt(4), HalfInt(3/2)], KRb_Zeeman, KRb_Nuclear_Ospelkaus, KRb_Polarizability)
 
 const DEFAULT_MOLECULAR_PARAMETERS = KRb_Parameters_Neyenhuis
 
@@ -127,7 +128,7 @@ UnitVectorX() = SphericalUnitVector(π/2, 0)
 UnitVectorY() = SphericalUnitVector(π/2, π/2)
 UnitVectorZ() = SphericalUnitVector(0, 0)
 
-function T⁽¹⁾(v::SphericalUnitVector)::Vector{ComplexF64}
+function T⁽¹⁾(v::SphericalUnitVector)::SVector{3, ComplexF64}
     θ = v.θ
     φ = v.φ
     
@@ -138,10 +139,10 @@ function T⁽¹⁾(v::SphericalUnitVector)::Vector{ComplexF64}
     T11 = -(1/sqrt(2)) * (x + im*y)
     T10 = z
 
-    return [-conj(T11), T10, T11]
+    return SVector(-conj(T11), T10, T11)
 end
 
-function T⁽²⁾(v::SphericalUnitVector)::Vector{ComplexF64}
+function T⁽²⁾(v::SphericalUnitVector)::SVector{5, ComplexF64}
     θ = v.θ
     φ = v.φ
 
@@ -153,7 +154,7 @@ function T⁽²⁾(v::SphericalUnitVector)::Vector{ComplexF64}
     T21 = -(1/2)*(x*z + z*x + im * (y*z + z*y))
     T22 = (1/2)*(x*x - y*y + im*(x*y + y*x))
 
-    return [conj(T22), -conj(T21), T20, T21, T22]
+    return SVector(conj(T22), -conj(T21), T20, T21, T22)
 end
 
 function get_tensor_component(p::Int, tensor::Vector{ComplexF64})
@@ -178,11 +179,11 @@ const DEFAULT_FIELDS = ExternalFields(545.9, 0.0)
 struct State
     N::Int
     mₙ::Int
-    I::Array{HalfIntegers.HalfInt, 2} # [K, Rb]
-    mᵢ::Array{HalfIntegers.HalfInt, 2}
+    I::SVector{2, HalfIntegers.HalfInt} # [K, Rb]
+    mᵢ::SVector{2, HalfIntegers.HalfInt}
 end
 
-State(N, mₙ, I₁, mᵢ₁, I₂, mᵢ₂) = State(N, mₙ, [I₁ I₂], [mᵢ₁ mᵢ₂])
+State(N, mₙ, I₁, mᵢ₁, I₂, mᵢ₂) = State(N, mₙ, SVector(I₁, I₂), SVector(mᵢ₁, mᵢ₂))
 State(N, mₙ, mᵢ₁::Number, mᵢ₂::Number) = State(N, mₙ, DEFAULT_MOLECULAR_PARAMETERS.I, [HalfIntegers.HalfInt(mᵢ₁) HalfIntegers.HalfInt(mᵢ₂)])
 
 n_hyperfine(I::HalfIntegers.HalfInt) = 2 * I + 1
