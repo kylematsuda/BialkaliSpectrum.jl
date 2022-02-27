@@ -90,6 +90,7 @@ function make_ac(molecular_parameters::MolecularParameters, basis::Vector{State}
 end
 
 struct HamiltonianParts
+    basis
     rotation
     dipole::SVector{3}
     dipole_relative::SVector{3} # used for transition strengths
@@ -109,7 +110,7 @@ function make_hamiltonian_parts(molecular_parameters::MolecularParameters, N_max
     zeeman = make_zeeman(molecular_parameters, basis)
     (ac_scalar, ac_tensor) = make_ac(molecular_parameters, basis)
 
-    return HamiltonianParts(rotation, dipole, dipole_relative, hyperfine, zeeman, ac_scalar, ac_tensor)
+    return HamiltonianParts(basis, rotation, dipole, dipole_relative, hyperfine, zeeman, ac_scalar, ac_tensor)
 end
 
 function hamiltonian(parts::HamiltonianParts, external_fields::ExternalFields)

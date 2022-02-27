@@ -18,7 +18,7 @@ export order_by_overlap_with, max_overlap_with, get_energy, get_energy_differenc
 
 export HamiltonianParts, make_hamiltonian_parts, hamiltonian, make_krb_hamiltonian_parts
 
-export calculate_spectrum, transition_strengths
+export Spectrum, calculate_spectrum, transition_strengths
 
 module Constants
     const μN = 7.622593285e-4 # MHz/G
@@ -40,15 +40,15 @@ end
 State(N, mₙ, I₁, mᵢ₁, I₂, mᵢ₂) = State(N, mₙ, SVector(I₁, I₂), SVector(mᵢ₁, mᵢ₂))
 State(N, mₙ, mᵢ₁::Number, mᵢ₂::Number) = State(N, mₙ, DEFAULT_MOLECULAR_PARAMETERS.I, [HalfInt(mᵢ₁) HalfInt(mᵢ₂)])
 
-include("utility.jl")
-include("matrix_elements.jl")
-include("hamiltonian.jl")
-
 struct Spectrum
     hamiltonian_parts
     energies
     eigenstates
 end
+
+include("utility.jl")
+include("matrix_elements.jl")
+include("hamiltonian.jl")
 
 function make_krb_hamiltonian_parts(N_max::Int)
     return make_hamiltonian_parts(KRb_Parameters_Neyenhuis, N_max)

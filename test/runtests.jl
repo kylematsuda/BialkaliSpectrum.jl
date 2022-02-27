@@ -7,9 +7,7 @@ using MoleculeSpectrum
 
     fields = ExternalFields(545.9, 0.0)
     parts = make_hamiltonian_parts(KRb_Parameters_Ospelkaus, N_max)
-    h = hamiltonian(parts, fields)
-    energies = eigvals(h)
-    states = eigvecs(h)
+    spectrum = calculate_spectrum(parts, fields)
 
     # Table II in paper
     comparisons = [
@@ -29,7 +27,7 @@ using MoleculeSpectrum
 
     for c in comparisons
         (g, e) = map(i -> State(c[i]...), 1:2)
-        transition = get_energy_difference(g, e, energies, states)
+        transition = get_energy_difference(spectrum, g, e)
         expected = c[3]
 
         @test abs(transition - expected) < tolerance
@@ -42,9 +40,7 @@ end
     B = 545.9
 
     fields = ExternalFields(B, 0.0)
-    h = hamiltonian(parts, fields)
-    energies = eigvals(h)
-    states = eigvecs(h)
+    spectrum = calculate_spectrum(parts, fields)
 
     @testset "No optical fields" begin
         tolerance = 0.005 # MHz
@@ -58,7 +54,7 @@ end
 
         for c in comparisons
             (g, e) = map(i -> State(c[i]...), 1:2)
-            transition = get_energy_difference(g, e, energies, states)
+            transition = get_energy_difference(spectrum, g, e)
             expected = c[3]
 
             @test abs(transition - expected) < tolerance
@@ -96,19 +92,20 @@ end
             (1, 0, -4, 1/2),
         ]
 
-        es = map(x -> get_energy(State(x...), energies, states), states_to_check)
+        es = map(x -> get_energy(spectrum, State(x...)), states_to_check)
 
         for c in comparisons
             θ = c[1] * π/180
             optical = SphericalVector(I_light, θ, 0.0)
             fields_with_light = ExternalFields(VectorZ(B), VectorZ(0.0), [optical])
 
-            h_light = hamiltonian(parts, fields_with_light)
-            energies_light = eigvals(h_light)
-            states_light = eigvecs(h_light)
+            spectrum_light = calculate_spectrum(parts, fields_with_light)
+            # h_light = hamiltonian(parts, fields_with_light)
+            # energies_light = eigvals(h_light)
+            # states_light = eigvecs(h_light)
 
             es_light = map(
-                x -> get_energy(State(x...), energies_light, states_light),
+                x -> get_energy(spectrum_light, State(x...)),
                 states_to_check
             )
 
@@ -148,14 +145,16 @@ end
     e_xyz = ExternalFields(VectorZ(0.0), SphericalVector(E, π/3, π/3), [])
 
     for fields in [(b_z, (b_x, b_y, b_xz, b_xyz)), (e_z, (e_x, e_y, e_xz, e_xyz))]
-        h_z = hamiltonian(parts, fields[1])
-        energies = eigvals(h_z)
+        spectrum_z = calculate_spectrum(parts, fields[1])
+        # h_z = hamiltonian(parts, fields[1])
+        # energies = eigvals(h_z)
 
         for f in fields[2]
-            h = hamiltonian(parts, f)
-            es = eigvals(h)
+            spectrum = calculate_spectrum(parts, f)
+            # h = hamiltonian(parts, f)
+            # es = eigvals(h)
     
-            @test es ≈ energies
+            @test spectrum.energies ≈ spectrum_z.energies
         end
     end
 end
@@ -175,11 +174,10 @@ end
         for φ in 0:2π/7:2π
     ]
 
-    energies = eigvals(hamiltonian(parts, fields_z))
+    sz = calculate_spectrum(parts, fields_z)
 
     for f in fields_test
-        es = eigvals(hamiltonian(parts, f))
-
-        @test es ≈ energies
+        s = calculate_spectrum(parts, f)
+        @test s.energies ≈ sz.energies
     end
 end
