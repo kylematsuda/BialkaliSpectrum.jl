@@ -252,29 +252,40 @@ WignerJ1J(j, m) = (-1)^(j-m) * m / sqrt(j*(j+1)*(2j+1))
 # Same as WignerSymbols.wigner3j(j, 2, j, -m, 0, m)
 WignerJ2J(j, m) = (-1)^(j-m) * 2 * (3m^2 - j*(j + 1)) / sqrt((2j - 1)*(2j)*(2j + 1)*(2j + 2)*(2j + 3))
 
+# Note: Need to enforce Kronecker deltas at the end!!!
+# This is not checked inside of this function, because this tensor could be dotted with another operator,
+# e.g., N ⋅ Iₖ, which allows mᵢ to change.
+#
+# Any Kronecker deltas need to be enforced at the scope where the dot product is taken.
 function T⁽¹⁾N(p::Int, bra::State, ket::State)::ComplexF64
-    N, mₙ, I, mᵢ = bra.N, bra.mₙ, bra.I, bra.mᵢ
-    N′, mₙ′, I′, mᵢ′ = ket.N, ket.mₙ, ket.I, ket.mᵢ
+    N, mₙ = bra.N, bra.mₙ
+    N′, mₙ′ = ket.N, ket.mₙ
 
-    deltas = δ(I, I′) * δ(mᵢ, mᵢ′) * δ(N, N′)
-
-    if deltas && (mₙ′ - mₙ + p == 0)
+    if δ(N, N′) && (mₙ′ - mₙ + p == 0)
         return (-1)^(N - mₙ) * sqrt(N*(N+1)*(2N+1)) * WignerSymbols.wigner3j(N, 1, N, -mₙ, p, mₙ′)
     else
         return 0
     end
 end
 
+# Note: Need to enforce Kronecker deltas at the end!!!
+# This is not checked inside of this function, because this tensor could be dotted with another operator,
+# e.g., N ⋅ Iₖ, which allows mₙ to change.
+#
+# Any Kronecker deltas need to be enforced at the scope where the dot product is taken.
 function T⁽¹⁾Iₖ(p::Int, k::Int, bra::State, ket::State)::ComplexF64
-    N, mₙ, I, mᵢ = bra.N, bra.mₙ, bra.I[k], bra.mᵢ[k]
-    N′, mₙ′, I′, mᵢ′ = ket.N, ket.mₙ, ket.I[k], ket.mᵢ[k]
+    I, mᵢ = bra.I[k], bra.mᵢ[k]
+    I′, mᵢ′ = ket.I[k], ket.mᵢ[k]
 
-    other = (k % 2) + 1 # States of other nucleus should Kronecker delta
-    other_nucleus = δ(bra.I[other], ket.I[other]) * δ(bra.mᵢ[other], ket.mᵢ[other])
+    # N, mₙ, I, mᵢ = bra.N, bra.mₙ, bra.I[k], bra.mᵢ[k]
+    # N′, mₙ′, I′, mᵢ′ = ket.N, ket.mₙ, ket.I[k], ket.mᵢ[k]
 
-    deltas = δ(I, I′) * δ(N, N′) * δ(mₙ, mₙ′) * other_nucleus
+    # other = (k % 2) + 1 # States of other nucleus should Kronecker delta
+    # other_nucleus = δ(bra.I[other], ket.I[other]) * δ(bra.mᵢ[other], ket.mᵢ[other])
 
-    if deltas && (mᵢ′ - mᵢ + p == 0)
+    # deltas = δ(I, I′) * δ(N, N′) * δ(mₙ, mₙ′) * other_nucleus
+
+    if δ(I, I′) && (mᵢ′ - mᵢ + p == 0)
         return (-1)^(I - mᵢ) * sqrt(I*(I+1)*(2I+1)) * WignerSymbols.wigner3j(I, 1, I, -mᵢ, p, mᵢ′)
     else
         return 0
@@ -354,15 +365,22 @@ function h_quadrupole(k::Int, basis::Vector{State})
 end
 
 function nuclear_spin_spin(bra::State, ket::State)::Float64
-    N, mₙ, (I_1, I_2), (mᵢ_1, mᵢ_2) = bra.N, bra.mₙ, bra.I, bra.mᵢ
-    N′, mₙ′, (I_1′, I_2′), (mᵢ_1′, mᵢ_2′) = ket.N, ket.mₙ, ket.I, ket.mᵢ
+    # N, mₙ, (I_1, I_2), (mᵢ_1, mᵢ_2) = bra.N, bra.mₙ, bra.I, bra.mᵢ
+    # N′, mₙ′, (I_1′, I_2′), (mᵢ_1′, mᵢ_2′) = ket.N, ket.mₙ, ket.I, ket.mᵢ
 
-    deltas = δ(N, N′) * δ(mₙ, mₙ′) * δ(I_1, I_1′) * δ(I_2, I_2′)
+    # N, mₙ, (I_1, I_2), (mᵢ_1, mᵢ_2) = bra.N, bra.mₙ, bra.I, bra.mᵢ
+    # N′, mₙ′, (I_1′, I_2′), (mᵢ_1′, mᵢ_2′) = ket.N, ket.mₙ, ket.I, ket.mᵢ
 
-    if deltas
-        p_independent = (-1)^(I_1 + I_2 - mᵢ_1 - mᵢ_2) * sqrt(I_1 * (I_1 + 1) * (2*I_1 + 1)) * sqrt(I_2 * (I_2 + 1) * (2*I_2 + 1))
-        p_dependent(p) = (-1)^p * WignerSymbols.wigner3j(I_1, 1, I_1, -mᵢ_1, p, mᵢ_1′) * WignerSymbols.wigner3j(I_2, 1, I_2, -mᵢ_2, -p, mᵢ_2′)
-        return p_independent * mapreduce(p_dependent, +, -1:1)
+    # deltas = δ(N, N′) * δ(mₙ, mₙ′) * δ(I_1, I_1′) * δ(I_2, I_2′)
+
+    deltas = δ(bra.N, ket.N) * δ(bra.mₙ, ket.mₙ)
+
+    if deltas && (ket.mᵢ[1] - bra.mᵢ[1] == bra.mᵢ[2] - ket.mᵢ[2])
+        return reduce(+, [(-1)^p * T⁽¹⁾Iₖ(p, 1, bra, ket) * T⁽¹⁾Iₖ(-p, 2, bra, ket) for p in -1:1])
+
+        # p_independent = (-1)^(I_1 + I_2 - mᵢ_1 - mᵢ_2) * sqrt(I_1 * (I_1 + 1) * (2*I_1 + 1)) * sqrt(I_2 * (I_2 + 1) * (2*I_2 + 1))
+        # p_dependent(p) = (-1)^p * WignerSymbols.wigner3j(I_1, 1, I_1, -mᵢ_1, p, mᵢ_1′) * WignerSymbols.wigner3j(I_2, 1, I_2, -mᵢ_2, -p, mᵢ_2′)
+        # return p_independent * mapreduce(p_dependent, +, -1:1)
     else
         return 0.0
     end
@@ -382,18 +400,20 @@ function h_nuclear_spin_spin(basis::Vector{State})
 end
 
 function nuclear_spin_rotation(k::Int, bra::State, ket::State)::Float64
-    N, mₙ, I, mᵢ = bra.N, bra.mₙ, bra.I[k], bra.mᵢ[k]
-    N′, mₙ′, I′, mᵢ′ = ket.N, ket.mₙ, ket.I[k], ket.mᵢ[k]
+    # N, mₙ, I, mᵢ = bra.N, bra.mₙ, bra.I[k], bra.mᵢ[k]
+    # N′, mₙ′, I′, mᵢ′ = ket.N, ket.mₙ, ket.I[k], ket.mᵢ[k]
 
     other = (k % 2) + 1 # States of other nucleus should Kronecker delta
     other_nucleus = δ(bra.I[other], ket.I[other]) * δ(bra.mᵢ[other], ket.mᵢ[other])
 
-    deltas = δ(N, N′) * δ(I, I′) * other_nucleus
+    # deltas = δ(N, N′) * δ(I, I′) * other_nucleus
 
-    if deltas && (mₙ′ - mₙ == mᵢ - mᵢ′)
-        p_independent = (-1)^(N + I - mₙ - mᵢ) * sqrt(N*(N+1)*(2*N + 1)) * sqrt(I*(I+1)*(2*I + 1))
-        p_dependent(p) = (-1)^p * WignerSymbols.wigner3j(N, 1, N, -mₙ, p, mₙ′) * WignerSymbols.wigner3j(I, 1, I, -mᵢ, -p, mᵢ′)
-        return p_independent * mapreduce(p_dependent, +, -1:1)
+    if other_nucleus && (ket.mₙ - bra.mₙ == bra.mᵢ[k] - ket.mᵢ[k])
+        return reduce(+, [(-1)^p * T⁽¹⁾N(p, bra, ket) * T⁽¹⁾Iₖ(-p, k, bra, ket) for p in -1:1])
+
+        # p_independent = (-1)^(N + I - mₙ - mᵢ) * sqrt(N*(N+1)*(2*N + 1)) * sqrt(I*(I+1)*(2*I + 1))
+        # p_dependent(p) = (-1)^p * WignerSymbols.wigner3j(N, 1, N, -mₙ, p, mₙ′) * WignerSymbols.wigner3j(I, 1, I, -mᵢ, -p, mᵢ′)
+        # return p_independent * mapreduce(p_dependent, +, -1:1)
     else
         return 0
     end
@@ -421,7 +441,10 @@ function h_zeeman_rotation(basis::Vector{State}, B_n::SphericalUnitVector)
         ket = basis[i]
         for j = i:elts
             bra = basis[j]
-            H[i, j] = dot(T⁽¹⁾B, [T⁽¹⁾N(p, bra, ket) for p in -1:1])
+
+            if δ(bra.I, ket.I) && δ(bra.mᵢ, ket.mᵢ)
+                H[i, j] = dot(T⁽¹⁾B, [T⁽¹⁾N(p, bra, ket) for p in -1:1])
+            end
         end
     end
     return H
@@ -436,7 +459,14 @@ function h_zeeman_nuclear(basis::Vector{State}, k::Int, B_n::SphericalUnitVector
         ket = basis[i]
         for j = i:elts
             bra = basis[j]
-            H[i, j] = dot(T⁽¹⁾B, [T⁽¹⁾Iₖ(p, k, bra, ket) for p in -1:1])
+
+            other = 1 + (k % 2)
+            rotation = δ(bra.N, ket.N) && δ(bra.mₙ, ket.mₙ)
+            I_other = δ(bra.I[other], ket.I[other]) && δ(bra.mᵢ[other], ket.mᵢ[other])
+
+            if rotation && I_other
+                H[i, j] = dot(T⁽¹⁾B, [T⁽¹⁾Iₖ(p, k, bra, ket) for p in -1:1])
+            end
         end
     end
     return H
