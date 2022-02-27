@@ -73,9 +73,7 @@ function nuclear_quadrupole(k::Int, bra::State, ket::State)::ComplexF64
 end
 
 function nuclear_spin_spin(bra::State, ket::State)::ComplexF64
-    if δ(bra.N, ket.N) && δ(bra.mₙ, ket.mₙ) && 
-        (ket.mᵢ[1] - bra.mᵢ[1] == bra.mᵢ[2] - ket.mᵢ[2])
-
+    if δ(bra.N, ket.N) && δ(bra.mₙ, ket.mₙ) && (ket.mᵢ[1] - bra.mᵢ[1] == bra.mᵢ[2] - ket.mᵢ[2])
         return reduce(+, [(-1)^p * T⁽¹⁾Iₖ(p, 1, bra, ket) * T⁽¹⁾Iₖ(-p, 2, bra, ket) for p in -1:1])
     else
         return 0.0
