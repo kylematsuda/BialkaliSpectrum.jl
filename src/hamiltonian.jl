@@ -1,132 +1,56 @@
-function h_rotation(basis::Vector{State})
-    return Diagonal(map(x -> rotation_matrix_element(x, x), basis))
+function h_diagonal(basis::Vector{State}, matrix_element::Function)
+    return Hermitian(Diagonal(map(x -> matrix_element(x, x), basis)))
 end
 
-function h_dipole_components(basis::Vector{State}, p::Int)
+# matrix_element should have signature (State, State) -> ComplexF64
+function h_rank_0(basis::Vector{State}, matrix_element::Function)
     elts::Int = length(basis)
     H = spzeros(ComplexF64, elts, elts)
     for i = 1:elts
         ket = basis[i]
         for j = i:elts
             bra = basis[j]
-            H[i, j] = dipole_matrix_element(p, bra, ket)
+            H[i, j] = matrix_element(bra, ket)
         end
     end
     return Hermitian(H)
 end
 
-function h_dipole(basis::Vector{State})
-    return [h_dipole_components(basis, p) for p in -1:1]
-end
-
-function h_quadrupole(k::Int, basis::Vector{State})
-    elts::Int = length(basis)
-    H = spzeros(ComplexF64, elts, elts)
-
-    for i = 1:elts
-        ket = basis[i]
-        for j = i:elts
-            bra = basis[j]
-            H[i, j] = nuclear_quadrupole(k, bra, ket)
-        end
-    end
-    return Hermitian(H)
-end
-
-function h_nuclear_spin_spin(basis::Vector{State})
+# matrix_element should have signature (Int, State, State) -> ComplexF64
+# first argument is tensor component p
+function h_tensor_component(basis::Vector{State}, matrix_element::Function, p::Int)
     elts::Int = length(basis)
     H = spzeros(ComplexF64, elts, elts)
     for i = 1:elts
         ket = basis[i]
         for j = i:elts
             bra = basis[j]
-            H[i, j] = nuclear_spin_spin(bra, ket)
+            H[i, j] = matrix_element(p, bra, ket)
         end
     end
     return Hermitian(H)
 end
 
-function h_nuclear_spin_rotation(k::Int, basis::Vector{State})
-    elts::Int = length(basis)
-    H = spzeros(ComplexF64, elts, elts)
-    for i = 1:elts
-        ket = basis[i]
-        for j = i:elts
-            bra = basis[j]
-            H[i, j] = nuclear_spin_rotation(k, bra, ket)
-        end
-    end
-    return Hermitian(H)
+function h_rank_1(basis::Vector{State}, matrix_element::Function)
+    return [h_tensor_component(basis, matrix_element, p) for p in -1:1]
 end
 
-function h_zeeman_rotation_components(basis::Vector{State}, p::Int)
-    elts::Int = length(basis)
-    H = spzeros(ComplexF64, elts, elts)
-    for i = 1:elts
-        ket = basis[i]
-        for j = i:elts
-            bra = basis[j]
-
-            H[i, j] = zeeman_rotation(p, bra, ket)
-
-            # if δ(bra.I, ket.I) && δ(bra.mᵢ, ket.mᵢ)
-            #     H[i, j] = T⁽¹⁾N(p, bra, ket)
-            # end
-        end
-    end
-    return Hermitian(H)
+function h_rank_2(basis::Vector{State}, matrix_element::Function)
+    return [h_tensor_component(basis, matrix_element, p) for p in -2:2]
 end
 
-function h_zeeman_rotation(basis::Vector{State})
-    return [h_zeeman_rotation_components(basis, p) for p in -1:1]
-end
+h_rotation(basis) = h_diagonal(basis, rotation_matrix_element)
+h_dipole(basis) = h_rank_1(basis, dipole_matrix_element)
 
-function h_zeeman_nuclear_components(basis::Vector{State}, k::Int, p::Int)
-    elts::Int = length(basis)
-    H = spzeros(ComplexF64, elts, elts)
-    for i = 1:elts
-        ket = basis[i]
-        for j = i:elts
-            bra = basis[j]
+h_quadrupole(basis, k) = h_rank_0(basis, (bra, ket) -> nuclear_quadrupole(k, bra, ket))
+h_nuclear_spin_spin(basis) = h_rank_0(basis, nuclear_spin_spin)
+h_nuclear_spin_rotation(basis, k) = h_rank_0(basis, (bra, ket) -> nuclear_spin_rotation(k, bra, ket))
 
-            # other = 1 + (k % 2)
-            # rotation = δ(bra.N, ket.N) && δ(bra.mₙ, ket.mₙ)
-            # I_other = δ(bra.I[other], ket.I[other]) && δ(bra.mᵢ[other], ket.mᵢ[other])
+h_zeeman_rotation(basis) = h_rank_1(basis, zeeman_rotation)
+h_zeeman_nuclear(basis, k) = h_rank_1(basis, (p, bra, ket) -> zeeman_nuclear(k, p, bra, ket))
 
-            # if rotation && I_other
-            #     H[i, j] = T⁽¹⁾Iₖ(p, k, bra, ket)
-            # end
-            H[i, j] = zeeman_nuclear(k, p, bra, ket)
-        end
-    end
-    return Hermitian(H)
-end
-
-function h_zeeman_nuclear(basis::Vector{State}, k::Int)
-    return [h_zeeman_nuclear_components(basis, k, p) for p in -1:1]
-end
-
-function h_ac_scalar(basis::Vector{State})
-    H = Diagonal(map(x -> scalar_polarizability(x, x), basis))
-    return Hermitian(H)
-end
-
-function h_ac_tensor_components(basis::Vector{State}, p::Int)
-    elts::Int = length(basis)
-    H = spzeros(ComplexF64, elts, elts)
-    for i = 1:elts
-        ket = basis[i]
-        for j = i:elts
-            bra = basis[j]
-            H[i, j] = tensor_polarizability(bra, ket, p)
-        end
-    end
-    return Hermitian(H)
-end
-
-function h_ac_tensor(basis::Vector{State})
-    return [h_ac_tensor_components(basis, p) for p in -2:2]
-end
+h_ac_scalar(basis) = h_diagonal(basis, scalar_polarizability)
+h_ac_tensor(basis) = h_rank_2(basis, tensor_polarizability)
 
 struct HamiltonianParts
     rotation
@@ -151,10 +75,10 @@ end
 
 function make_hyperfine(molecular_parameters::MolecularParameters, basis::Vector{State})
     eqQᵢ = molecular_parameters.nuclear.eqQᵢ
-    quadrupole = mapreduce(k -> (1/4) * eqQᵢ[k] * h_quadrupole(k, basis), +, 1:2)
+    quadrupole = mapreduce(k -> (1/4) * eqQᵢ[k] * h_quadrupole(basis, k), +, 1:2)
 
     cᵢ = molecular_parameters.nuclear.cᵢ
-    spin_rotation = mapreduce(k -> cᵢ[k] * h_nuclear_spin_rotation(k, basis), +, 1:2)
+    spin_rotation = mapreduce(k -> cᵢ[k] * h_nuclear_spin_rotation(basis, k), +, 1:2)
 
     c₄ = molecular_parameters.nuclear.c₄
     spin_spin = c₄ * h_nuclear_spin_spin(basis)

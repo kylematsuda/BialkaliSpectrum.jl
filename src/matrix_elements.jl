@@ -115,7 +115,7 @@ end
 
 scalar_polarizability(bra::State, ket::State) = δ(bra, ket)
 
-function tensor_polarizability(bra::State, ket::State, p::Int) 
+function tensor_polarizability(p::Int, bra::State, ket::State) 
     deltas = δ(bra.N, ket.N) * δ(bra.I, ket.I) * δ(bra.mᵢ, ket.mᵢ)
     N, mₙ = bra.N, bra.mₙ
     mₙ′ = ket.mₙ
