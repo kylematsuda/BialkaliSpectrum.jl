@@ -692,7 +692,7 @@ end
     end
 end
 
-@testset "Trivial angular dependence with one field" begin
+@testset "No angular dependence of energies with one field" begin
     N_max = 5
     B = 545.9
     E = 1000.0
@@ -723,7 +723,7 @@ end
     end
 end
 
-@testset "Trivial azimuthal dependence with one optical field" begin
+@testset "No azimuthal dependence of energies with one optical field" begin
     N_max = 5
     parts = make_hamiltonian_parts(KRb_Parameters_Neyenhuis, N_max)
 
