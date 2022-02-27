@@ -440,34 +440,7 @@ function h_zeeman_nuclear(basis::Vector{State}, k::Int, B_n::SphericalUnitVector
     return H
 end
 
-# # Remove me later
-# function T2pol(θ, φ)
-#     x = sin(θ) * cos(φ)
-#     y = sin(θ) * sin(φ)
-#     z = cos(θ)
-
-#     T20 = (2*z^2 - x^2 - y^2) / sqrt(6)
-#     T21 = -(1/2)*(x*z + z*x + im * (y*z + z*y))
-#     T22 = (1/2)*(x*x - y*y + im*(x*y + y*x))
-
-#     return [conj(T22), -conj(T21), T20, T21, T22]
-# end
-
 scalar_polarizability(bra::State, ket::State) = δ(bra, ket)
-
-# function tensor_polarizability(bra::State, ket::State, T2ϵϵ) 
-#     deltas = δ(bra.N, ket.N) * δ(bra.I, ket.I) * δ(bra.mᵢ, ket.mᵢ)
-#     N, mₙ = bra.N, bra.mₙ
-#     mₙ′ = ket.mₙ
-
-#     if deltas && (N > 0) && (abs(mₙ′-mₙ) <= 2)
-#         p_independent = sqrt(6) * (-1)^(mₙ) * (2*N + 1) * WignerJ2J(N, 0)
-#         p_dependent(p) = (-1)^p * T2ϵϵ[p+3] * WignerSymbols.wigner3j(N, 2, N, -mₙ, -p, mₙ′)
-#         return p_independent * mapreduce(p_dependent, +, -2:2)
-#     else
-#         return 0
-#     end
-# end
 
 function tensor_polarizability(bra::State, ket::State, ϵ::SphericalUnitVector) 
     deltas = δ(bra.N, ket.N) * δ(bra.I, ket.I) * δ(bra.mᵢ, ket.mᵢ)
