@@ -175,6 +175,7 @@ end
 
 ExternalFields(B::Float64, E::Float64) = ExternalFields(VectorZ(B), VectorZ(E), [])
 const DEFAULT_FIELDS = ExternalFields(545.9, 0.0)
+const TEST_FIELDS = ExternalFields(SphericalVector(545.9, π/4, π/4), SphericalVector(1000., 3π/4, 7π/4), [SphericalVector(2350., 0.0, 0.0)])
 
 struct State
     N::Int
@@ -551,18 +552,28 @@ function hamiltonian(parts::HamiltonianParts, external_fields::ExternalFields)
     h = parts.rotation + parts.hyperfine
 
     E = external_fields.E.magnitude
-    E_n = SphericalUnitVector(external_fields.E)
-    h += E * tensor_dot(T⁽¹⁾(E_n), parts.dipole)
+    T1E = T⁽¹⁾(SphericalUnitVector(external_fields.E))
+    # Manually writing these out seems to have slightly better performance
+    # than using tensor_dot??? May not actually be faster
+    h += E * ((-1) * T1E[3] * parts.dipole[1] +
+        T1E[2] * parts.dipole[2] +
+        (-1) * T1E[1] * parts.dipole[3])
 
     B = external_fields.B.magnitude
-    B_n = SphericalUnitVector(external_fields.B)
-    h += B * tensor_dot(T⁽¹⁾(B_n), parts.zeeman)
+    T1B = T⁽¹⁾(SphericalUnitVector(external_fields.B))
+    h += B * ((-1) * T1B[3] * parts.zeeman[1] +
+        T1B[2] * parts.zeeman[2] +
+        (-1) * T1B[1] * parts.zeeman[3])
 
     for beam in external_fields.Optical
         I_laser = beam.magnitude
-        ϵ = SphericalUnitVector(beam)
+        T2ϵ = T⁽²⁾(SphericalUnitVector(beam))
         h += parts.ac_scalar * I_laser
-        h += tensor_dot(T⁽²⁾(ϵ), parts.ac_tensor) * I_laser
+        h += I_laser * (T2ϵ[5] * parts.ac_tensor[1] +
+            (-1) * T2ϵ[4] * parts.ac_tensor[2] +
+            T2ϵ[3] * parts.ac_tensor[3] +
+            (-1) * T2ϵ[2] * parts.ac_tensor[4] +
+            T2ϵ[1] * parts.ac_tensor[5])
     end
 
     return Array(Hermitian(h))

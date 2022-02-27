@@ -20,3 +20,9 @@ after making everything complex: generating full hamiltonian takes 0.512 s
 after factoring everything out:
     make_hamiltonian_parts = 0.555
     hamiltonian = 0.214
+
+2/27/21
+    All tests using TEST_FIELDS
+    tensor_dot: [238, 656] ms, 692 MiB
+    manually writing loops instead of tensor_dot: [232, 493] ms, 653 MiB
+    manual loops, +=: [192, 508] ms, 564 MiB
