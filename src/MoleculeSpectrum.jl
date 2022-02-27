@@ -1,12 +1,21 @@
 module MoleculeSpectrum
 
-using WignerSymbols
-using HalfIntegers
-using LinearAlgebra
-using SparseArrays
-using StaticArrays
+import WignerSymbols: wigner3j
+import HalfIntegers: HalfInt
+using LinearAlgebra, SparseArrays, StaticArrays, Test
 
-using Test
+export ZeemanParameters, NuclearParameters, Polarizability, MolecularParameters
+export KRb_Parameters_Neyenhuis, KRb_Parameters_Ospelkaus, DEFAULT_MOLECULAR_PARAMETERS
+
+export SphericalVector, VectorX, VectorY, VectorZ
+export SphericalUnitVector, UnitVectorX, UnitVectorY, UnitVectorZ
+export T⁽¹⁾, T⁽²⁾, get_tensor_component, tensor_dot
+export ExternalFields, DEFAULT_FIELDS, TEST_FIELDS
+
+export State
+export index_to_state, state_to_index, order_by_overlap_with, max_overlap_with, get_energy, get_energy_difference
+
+export HamiltonianParts, make_hamiltonian_parts, hamiltonian
 
 module Constants
     const μN = 7.622593285e-4 # MHz/G
@@ -180,17 +189,17 @@ const TEST_FIELDS = ExternalFields(SphericalVector(545.9, π/4, π/4), Spherical
 struct State
     N::Int
     mₙ::Int
-    I::SVector{2, HalfIntegers.HalfInt} # [K, Rb]
-    mᵢ::SVector{2, HalfIntegers.HalfInt}
+    I::SVector{2, HalfInt} # [K, Rb]
+    mᵢ::SVector{2, HalfInt}
 end
 
 State(N, mₙ, I₁, mᵢ₁, I₂, mᵢ₂) = State(N, mₙ, SVector(I₁, I₂), SVector(mᵢ₁, mᵢ₂))
-State(N, mₙ, mᵢ₁::Number, mᵢ₂::Number) = State(N, mₙ, DEFAULT_MOLECULAR_PARAMETERS.I, [HalfIntegers.HalfInt(mᵢ₁) HalfIntegers.HalfInt(mᵢ₂)])
+State(N, mₙ, mᵢ₁::Number, mᵢ₂::Number) = State(N, mₙ, DEFAULT_MOLECULAR_PARAMETERS.I, [HalfInt(mᵢ₁) HalfInt(mᵢ₂)])
 
-n_hyperfine(I::HalfIntegers.HalfInt) = 2 * I + 1
+n_hyperfine(I::HalfInt) = 2 * I + 1
 n_hyperfine(s::State) = mapreduce(n_hyperfine, *, s.I)
 
-function index_to_state(i::Int, I₁::HalfIntegers.HalfInt, I₂::HalfIntegers.HalfInt)::State
+function index_to_state(i::Int, I₁::HalfInt, I₂::HalfInt)::State
     N_Hyperfine = mapreduce(n_hyperfine, *, [I₁ I₂;])
 
     # Hyperfine part
@@ -264,7 +273,7 @@ function T⁽¹⁾N(p::Int, bra::State, ket::State)::ComplexF64
     N′, mₙ′ = ket.N, ket.mₙ
 
     if δ(N, N′) && (mₙ′ - mₙ + p == 0)
-        return (-1)^(N - mₙ) * sqrt(N*(N+1)*(2N+1)) * WignerSymbols.wigner3j(N, 1, N, -mₙ, p, mₙ′)
+        return (-1)^(N - mₙ) * sqrt(N*(N+1)*(2N+1)) * wigner3j(N, 1, N, -mₙ, p, mₙ′)
     else
         return 0
     end
@@ -280,7 +289,7 @@ function T⁽¹⁾Iₖ(p::Int, k::Int, bra::State, ket::State)::ComplexF64
     I′, mᵢ′ = ket.I[k], ket.mᵢ[k]
 
     if δ(I, I′) && (mᵢ′ - mᵢ + p == 0)
-        return (-1)^(I - mᵢ) * sqrt(I*(I+1)*(2I+1)) * WignerSymbols.wigner3j(I, 1, I, -mᵢ, p, mᵢ′)
+        return (-1)^(I - mᵢ) * sqrt(I*(I+1)*(2I+1)) * wigner3j(I, 1, I, -mᵢ, p, mᵢ′)
     else
         return 0
     end
@@ -297,7 +306,7 @@ function dipole_matrix_element(p::Int, bra::State, ket::State)::ComplexF64
     N′, mₙ′, mᵢ′ = ket.N, ket.mₙ, ket.mᵢ
 
     if δ(mᵢ, mᵢ′) && (-mₙ + p + mₙ′ == 0)
-        return (-1)^mₙ * sqrt((2N+1)*(2N′+1)) * WignerSymbols.wigner3j(N, 1, N′, -mₙ, p, mₙ′) * WignerSymbols.wigner3j(N, 1, N′, 0, 0, 0)
+        return (-1)^mₙ * sqrt((2N+1)*(2N′+1)) * wigner3j(N, 1, N′, -mₙ, p, mₙ′) * wigner3j(N, 1, N′, 0, 0, 0)
     else
         return 0
     end
@@ -333,8 +342,8 @@ function nuclear_quadrupole(k::Int, bra::State, ket::State)::ComplexF64
         (abs(mₙ′-mₙ) <= 2) && (abs(mᵢ′-mᵢ) <= 2)
 
         # Brown and Carrington pg. 477
-        p_independent =  (-1)^(I - mᵢ - mₙ) * sqrt(2*N + 1) * sqrt(2*N′ + 1) * WignerSymbols.wigner3j(N, 2, N′, 0, 0, 0) / WignerJ2J(I, I)
-        p_dependent(p) = (-1)^(p) * WignerSymbols.wigner3j(N, 2, N′, -mₙ, p, mₙ′) * WignerSymbols.wigner3j(I, 2, I, -mᵢ, -p, mᵢ′)
+        p_independent =  (-1)^(I - mᵢ - mₙ) * sqrt(2*N + 1) * sqrt(2*N′ + 1) * wigner3j(N, 2, N′, 0, 0, 0) / WignerJ2J(I, I)
+        p_dependent(p) = (-1)^(p) * wigner3j(N, 2, N′, -mₙ, p, mₙ′) * wigner3j(I, 2, I, -mᵢ, -p, mᵢ′)
         return p_independent * mapreduce(p_dependent, +, -2:2)
     else
         return 0.0
@@ -454,7 +463,7 @@ function tensor_polarizability(bra::State, ket::State, p::Int)
     mₙ′ = ket.mₙ
 
     if deltas && (N > 0) && (mₙ′- mₙ - p == 0)
-        return sqrt(6) * (-1)^(mₙ) * (2*N + 1) * WignerJ2J(N, 0) * WignerSymbols.wigner3j(N, 2, N, -mₙ, -p, mₙ′)
+        return sqrt(6) * (-1)^(mₙ) * (2*N + 1) * WignerJ2J(N, 0) * wigner3j(N, 2, N, -mₙ, -p, mₙ′)
     else
         return 0
     end
@@ -577,185 +586,6 @@ function hamiltonian(parts::HamiltonianParts, external_fields::ExternalFields)
     end
 
     return Array(Hermitian(h))
-end
-
-@testset "Reproduces Ospelkaus et al., PRL 104, 030402 (2010)" begin
-    N_max = 5
-    tolerance = 0.0011 # MHz
-
-    fields = ExternalFields(545.9, 0.0)
-    parts = make_hamiltonian_parts(KRb_Parameters_Ospelkaus, N_max)
-    h = hamiltonian(parts, fields)
-    energies = eigvals(h)
-    states = eigvecs(h)
-
-    comparisons = [
-        ((0, 0, -4, 1/2), (1, 1, -4, 1/2),  2227.835),
-        ((0, 0, -4, 1/2), (1, 0, -4, 1/2),  2228.119),
-        ((0, 0, -4, 1/2), (1, -1, -4, 1/2), 2227.776),
-        ((0, 0, -4, 1/2), (1, 0, -4, 3/2),  2227.008),
-        ((0, 0, -4, 1/2), (1, -1, -4, 3/2), 2227.128),
-        ((0, 0, -4, 1/2), (1, 0, -3, 1/2),  2228.225),
-        ((0, 0, -4, 1/2), (1, 1, -4, -1/2), 2228.593),
-        ((0, 0, -4, 1/2), (1, 0, -4, -1/2), 2228.805),
-        ((0, 0, -4, 3/2), (1, 0, -4, 3/2),  2227.761),
-        ((0, 0, -3, 1/2), (1, 0, -3, 1/2),  2228.091),
-    ]
-
-    for c in comparisons
-        (g, e) = map(i -> State(c[i]...), 1:2)
-        transition = get_energy_difference(g, e, energies, states)
-        expected = c[3]
-
-        @test abs(transition - expected) < tolerance
-    end
-end
-
-@testset verbose=true "Reproduces Neyenhuis et al., PRL 109, 230403 (2012)" begin
-    N_max = 5
-    parts = make_hamiltonian_parts(KRb_Parameters_Neyenhuis, N_max)
-    B = 545.9
-
-    fields = ExternalFields(B, 0.0)
-    h = hamiltonian(parts, fields)
-    energies = eigvals(h)
-    states = eigvecs(h)
-
-    @testset "No optical fields" begin
-        tolerance = 0.005 # MHz
-
-        comparisons = [
-            ((0, 0, -4, 1/2), (1, 1, -4, 1/2),  2227.842),
-            ((0, 0, -4, 1/2), (1, 0, -4, 1/2),  2228.110),
-            ((0, 0, -4, 1/2), (1, -1, -4, 1/2), 2227.784),
-        ]
-
-        for c in comparisons
-            (g, e) = map(i -> State(c[i]...), 1:2)
-            transition = get_energy_difference(g, e, energies, states)
-            expected = c[3]
-
-            @test abs(transition - expected) < tolerance
-        end
-    end
-
-    @testset "α(θ)" begin
-        I_light = 2350.
-        tolerance = 0.035 # Relative tolerance in α
-
-        # These are generated by diagonalizing the simplified Hamiltonian H from the
-        # main text and plugging in the experimental values for α_parallel and α_perpendicular.
-        # A few % tolerance seems reasonable given that these values come from the simplified Hamiltonian.
-        #
-        # Note: The supplement shows the full calculation (which should match this, in principle).
-        comparisons = [
-            # θ, m =  -1,      +1,      0
-            (0.0,   46.4e-6, 46.4e-6, 73.2e-6),
-            (10.0,  46.9e-6, 46.9e-6, 72.2e-6),
-            (20.0,  48.4e-6, 48.2e-6, 69.4e-6),
-            (30.0,  50.9e-6, 49.8e-6, 65.3e-6),
-            (40.0,  54.0e-6, 51.2e-6, 60.7e-6),
-            (50.0,  57.5e-6, 52.4e-6, 56.2e-6),
-            (60.0,  60.7e-6, 53.1e-6, 52.2e-6),
-            (70.0,  63.3e-6, 53.6e-6, 49.0e-6),
-            (80.0,  65.0e-6, 53.9e-6, 47.1e-6),
-            (90.0,  65.6e-6, 54.0e-6, 46.4e-6),
-        ]
-        α00 = 55.3e-6
-
-        states_to_check = [
-            (0, 0, -4, 1/2),
-            (1, -1, -4, 1/2),
-            (1, 1, -4, 1/2),
-            (1, 0, -4, 1/2),
-        ]
-
-        es = map(x -> get_energy(State(x...), energies, states), states_to_check)
-
-        for c in comparisons
-            θ = c[1] * π/180
-            optical = SphericalVector(I_light, θ, 0.0)
-            fields_with_light = ExternalFields(VectorZ(B), VectorZ(0.0), [optical])
-
-            h_light = hamiltonian(parts, fields_with_light)
-            energies_light = eigvals(h_light)
-            states_light = eigvecs(h_light)
-
-            es_light = map(
-                x -> get_energy(State(x...), energies_light, states_light),
-                states_to_check
-            )
-
-            αs = map(
-                k -> -(es_light[k] - es[k]) / I_light,
-                eachindex(es)
-            )
-            expected = [α00, c[2:end]...]
-            
-            errors = map(
-                k -> abs(1 - (expected[k] / αs[k])),
-                eachindex(expected)
-            )
-
-            # println(errors) # Uncomment to show the errors on every iteration
-            @test all(errors .< tolerance)
-        end
-    end
-end
-
-@testset "No angular dependence of energies with one field" begin
-    N_max = 5
-    B = 545.9
-    E = 1000.0
-    parts = make_hamiltonian_parts(KRb_Parameters_Neyenhuis, N_max)
-
-    b_z = ExternalFields(B, 0.0)
-    b_x = ExternalFields(VectorX(B), VectorZ(0.0), [])
-    b_y = ExternalFields(VectorY(B), VectorZ(0.0), [])
-    b_xz = ExternalFields(SphericalVector(B, π/4, 0.0), VectorZ(0.0), [])
-    b_xyz = ExternalFields(SphericalVector(B, π/3, π/3), VectorZ(0.0), [])
-
-    e_z = ExternalFields(0.0, E)
-    e_x = ExternalFields(VectorZ(0.0), VectorX(E), [])
-    e_y = ExternalFields(VectorZ(0.0), VectorY(E), [])
-    e_xz = ExternalFields(VectorZ(0.0), SphericalVector(E, π/4, 0.0), [])
-    e_xyz = ExternalFields(VectorZ(0.0), SphericalVector(E, π/3, π/3), [])
-
-    for fields in [(b_z, (b_x, b_y, b_xz, b_xyz)), (e_z, (e_x, e_y, e_xz, e_xyz))]
-        h_z = hamiltonian(parts, fields[1])
-        energies = eigvals(h_z)
-
-        for f in fields[2]
-            h = hamiltonian(parts, f)
-            es = eigvals(h)
-    
-            @test es ≈ energies
-        end
-    end
-end
-
-@testset "No azimuthal dependence of energies with one optical field" begin
-    N_max = 5
-    parts = make_hamiltonian_parts(KRb_Parameters_Neyenhuis, N_max)
-
-    B = 545.9
-    E = 0.0
-    I_light = 2350.
-    θ = π/3 # Something random-ish but not on either pole
-
-    fields_z = ExternalFields(VectorZ(B), VectorZ(E), [SphericalVector(I_light, θ, 0.0)])
-    fields_test = [
-        ExternalFields(VectorZ(B), VectorZ(E), [SphericalVector(I_light, θ, φ)])
-        for φ in 0:2π/7:2π
-    ]
-
-    energies = eigvals(hamiltonian(parts, fields_z))
-
-    for f in fields_test
-        es = eigvals(hamiltonian(parts, f))
-
-        @test es ≈ energies
-    end
 end
 
 end # module
