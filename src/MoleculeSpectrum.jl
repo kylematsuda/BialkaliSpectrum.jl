@@ -5,6 +5,8 @@ using HalfIntegers
 using LinearAlgebra
 using SparseArrays
 
+using Test
+
 module Constants
     const μN = 7.622593285e-4 # MHz/G
 
@@ -60,7 +62,7 @@ const KRb_Nuclear_Neyenhuis = NuclearParameters([0.45 -1.308], [-24.1e-6 420.1e-
 const KRb_Nuclear_Ospelkaus = NuclearParameters([0.45 -1.41], [-24.1e-6 420.1e-6], -2030.4e-6)
 
 const KRb_Parameters_Neyenhuis = MolecularParameters(0.574, 1113.9514, [HalfInt(4) HalfInt(3/2)], KRb_Zeeman, KRb_Nuclear_Neyenhuis, KRb_Polarizability)
-const KRb_Parameters_Ospelkaus = MolecularParameters(0.574, 1113.9514, [HalfInt(4) HalfInt(3/2)], KRb_Zeeman, KRb_Nuclear_Ospelkaus, KRb_Polarizability)
+const KRb_Parameters_Ospelkaus = MolecularParameters(0.574, 1113.950, [HalfInt(4) HalfInt(3/2)], KRb_Zeeman, KRb_Nuclear_Ospelkaus, KRb_Polarizability)
 
 const DEFAULT_MOLECULAR_PARAMETERS = KRb_Parameters_Neyenhuis
 
@@ -169,11 +171,7 @@ struct ExternalFields
     Optical::Vector{SphericalVector}
 end
 
-const DEFAULT_FIELDS = ExternalFields(
-    VectorZ(545.9),
-    VectorZ(0.0),
-    []
-)
+const DEFAULT_FIELDS = ExternalFields(VectorZ(545.9), VectorZ(0.0), [])
 
 struct State
     N::Int
@@ -658,6 +656,36 @@ function hamiltonian(molecular_parameters::MolecularParameters, N_max::Int, exte
 
     # ac_stark = h_ac(molecular_parameters, basis, 0.0, 0.0, 0.0)
     return Array(Hermitian(dc_stark + hf + zeeman + ac_stark))
+end
+
+@testset "Reproduces Ospelkaus et al., PRL 104, 030402 (2010)" begin
+    tolerance = 0.0015 # MHz
+
+    fields = ExternalFields(VectorZ(545.9), VectorZ(0.0), [])
+    h = hamiltonian(KRb_Parameters_Ospelkaus, 5, fields)
+    energies = eigvals(h)
+    states = eigvecs(h)
+
+    comparisons = [
+        ((0, 0, -4, 1/2), (1, 1, -4, 1/2),  2227.835),
+        ((0, 0, -4, 1/2), (1, 0, -4, 1/2),  2228.119),
+        ((0, 0, -4, 1/2), (1, -1, -4, 1/2), 2227.776),
+        ((0, 0, -4, 1/2), (1, 0, -4, 3/2),  2227.008),
+        ((0, 0, -4, 1/2), (1, -1, -4, 3/2), 2227.128),
+        ((0, 0, -4, 1/2), (1, 0, -3, 1/2),  2228.225),
+        ((0, 0, -4, 1/2), (1, 1, -4, -1/2), 2228.593),
+        ((0, 0, -4, 1/2), (1, 0, -4, -1/2), 2228.805),
+        ((0, 0, -4, 3/2), (1, 0, -4, 3/2),  2227.761),
+        ((0, 0, -3, 1/2), (1, 0, -3, 1/2),  2228.091),
+    ]
+
+    for c in comparisons
+        (g, e) = map(i -> State(c[i]...), 1:2)
+        transition = energy_difference(g, e, energies, states)
+        expected = c[3]
+
+        @test abs(transition - expected) < tolerance
+    end
 end
 
 
