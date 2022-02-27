@@ -9,7 +9,6 @@ using Test
 
 module Constants
     const μN = 7.622593285e-4 # MHz/G
-
     const DToSI = 3.33564e-30
     const h = 6.62607004e-34
     const DVcm⁻¹ToMHz = (DToSI / h) * 1e-4
@@ -189,8 +188,6 @@ State(N, mₙ, mᵢ₁::Number, mᵢ₂::Number) = State(N, mₙ, DEFAULT_MOLECU
 n_hyperfine(I::HalfIntegers.HalfInt) = 2 * I + 1
 n_hyperfine(s::State) = mapreduce(n_hyperfine, *, s.I)
 
-# const N_Hyperfine = n_hyperfine(I_K) * n_hyperfine(I_Rb)
-
 function index_to_state(i::Int, I₁::HalfIntegers.HalfInt, I₂::HalfIntegers.HalfInt)::State
     N_Hyperfine = mapreduce(n_hyperfine, *, [I₁ I₂;])
 
@@ -277,14 +274,6 @@ function T⁽¹⁾Iₖ(p::Int, k::Int, bra::State, ket::State)::ComplexF64
     I, mᵢ = bra.I[k], bra.mᵢ[k]
     I′, mᵢ′ = ket.I[k], ket.mᵢ[k]
 
-    # N, mₙ, I, mᵢ = bra.N, bra.mₙ, bra.I[k], bra.mᵢ[k]
-    # N′, mₙ′, I′, mᵢ′ = ket.N, ket.mₙ, ket.I[k], ket.mᵢ[k]
-
-    # other = (k % 2) + 1 # States of other nucleus should Kronecker delta
-    # other_nucleus = δ(bra.I[other], ket.I[other]) * δ(bra.mᵢ[other], ket.mᵢ[other])
-
-    # deltas = δ(I, I′) * δ(N, N′) * δ(mₙ, mₙ′) * other_nucleus
-
     if δ(I, I′) && (mᵢ′ - mᵢ + p == 0)
         return (-1)^(I - mᵢ) * sqrt(I*(I+1)*(2I+1)) * WignerSymbols.wigner3j(I, 1, I, -mᵢ, p, mᵢ′)
     else
@@ -365,22 +354,10 @@ function h_quadrupole(k::Int, basis::Vector{State})
 end
 
 function nuclear_spin_spin(bra::State, ket::State)::Float64
-    # N, mₙ, (I_1, I_2), (mᵢ_1, mᵢ_2) = bra.N, bra.mₙ, bra.I, bra.mᵢ
-    # N′, mₙ′, (I_1′, I_2′), (mᵢ_1′, mᵢ_2′) = ket.N, ket.mₙ, ket.I, ket.mᵢ
+    if δ(bra.N, ket.N) && δ(bra.mₙ, ket.mₙ) && 
+        (ket.mᵢ[1] - bra.mᵢ[1] == bra.mᵢ[2] - ket.mᵢ[2])
 
-    # N, mₙ, (I_1, I_2), (mᵢ_1, mᵢ_2) = bra.N, bra.mₙ, bra.I, bra.mᵢ
-    # N′, mₙ′, (I_1′, I_2′), (mᵢ_1′, mᵢ_2′) = ket.N, ket.mₙ, ket.I, ket.mᵢ
-
-    # deltas = δ(N, N′) * δ(mₙ, mₙ′) * δ(I_1, I_1′) * δ(I_2, I_2′)
-
-    deltas = δ(bra.N, ket.N) * δ(bra.mₙ, ket.mₙ)
-
-    if deltas && (ket.mᵢ[1] - bra.mᵢ[1] == bra.mᵢ[2] - ket.mᵢ[2])
         return reduce(+, [(-1)^p * T⁽¹⁾Iₖ(p, 1, bra, ket) * T⁽¹⁾Iₖ(-p, 2, bra, ket) for p in -1:1])
-
-        # p_independent = (-1)^(I_1 + I_2 - mᵢ_1 - mᵢ_2) * sqrt(I_1 * (I_1 + 1) * (2*I_1 + 1)) * sqrt(I_2 * (I_2 + 1) * (2*I_2 + 1))
-        # p_dependent(p) = (-1)^p * WignerSymbols.wigner3j(I_1, 1, I_1, -mᵢ_1, p, mᵢ_1′) * WignerSymbols.wigner3j(I_2, 1, I_2, -mᵢ_2, -p, mᵢ_2′)
-        # return p_independent * mapreduce(p_dependent, +, -1:1)
     else
         return 0.0
     end
@@ -400,20 +377,11 @@ function h_nuclear_spin_spin(basis::Vector{State})
 end
 
 function nuclear_spin_rotation(k::Int, bra::State, ket::State)::Float64
-    # N, mₙ, I, mᵢ = bra.N, bra.mₙ, bra.I[k], bra.mᵢ[k]
-    # N′, mₙ′, I′, mᵢ′ = ket.N, ket.mₙ, ket.I[k], ket.mᵢ[k]
-
     other = (k % 2) + 1 # States of other nucleus should Kronecker delta
     other_nucleus = δ(bra.I[other], ket.I[other]) * δ(bra.mᵢ[other], ket.mᵢ[other])
 
-    # deltas = δ(N, N′) * δ(I, I′) * other_nucleus
-
     if other_nucleus && (ket.mₙ - bra.mₙ == bra.mᵢ[k] - ket.mᵢ[k])
         return reduce(+, [(-1)^p * T⁽¹⁾N(p, bra, ket) * T⁽¹⁾Iₖ(-p, k, bra, ket) for p in -1:1])
-
-        # p_independent = (-1)^(N + I - mₙ - mᵢ) * sqrt(N*(N+1)*(2*N + 1)) * sqrt(I*(I+1)*(2*I + 1))
-        # p_dependent(p) = (-1)^p * WignerSymbols.wigner3j(N, 1, N, -mₙ, p, mₙ′) * WignerSymbols.wigner3j(I, 1, I, -mᵢ, -p, mᵢ′)
-        # return p_independent * mapreduce(p_dependent, +, -1:1)
     else
         return 0
     end
@@ -472,34 +440,34 @@ function h_zeeman_nuclear(basis::Vector{State}, k::Int, B_n::SphericalUnitVector
     return H
 end
 
-# Remove me later
-function T2pol(θ, φ)
-    x = sin(θ) * cos(φ)
-    y = sin(θ) * sin(φ)
-    z = cos(θ)
+# # Remove me later
+# function T2pol(θ, φ)
+#     x = sin(θ) * cos(φ)
+#     y = sin(θ) * sin(φ)
+#     z = cos(θ)
 
-    T20 = (2*z^2 - x^2 - y^2) / sqrt(6)
-    T21 = -(1/2)*(x*z + z*x + im * (y*z + z*y))
-    T22 = (1/2)*(x*x - y*y + im*(x*y + y*x))
+#     T20 = (2*z^2 - x^2 - y^2) / sqrt(6)
+#     T21 = -(1/2)*(x*z + z*x + im * (y*z + z*y))
+#     T22 = (1/2)*(x*x - y*y + im*(x*y + y*x))
 
-    return [conj(T22), -conj(T21), T20, T21, T22]
-end
+#     return [conj(T22), -conj(T21), T20, T21, T22]
+# end
 
 scalar_polarizability(bra::State, ket::State) = δ(bra, ket)
 
-function tensor_polarizability(bra::State, ket::State, T2ϵϵ) 
-    deltas = δ(bra.N, ket.N) * δ(bra.I, ket.I) * δ(bra.mᵢ, ket.mᵢ)
-    N, mₙ = bra.N, bra.mₙ
-    mₙ′ = ket.mₙ
+# function tensor_polarizability(bra::State, ket::State, T2ϵϵ) 
+#     deltas = δ(bra.N, ket.N) * δ(bra.I, ket.I) * δ(bra.mᵢ, ket.mᵢ)
+#     N, mₙ = bra.N, bra.mₙ
+#     mₙ′ = ket.mₙ
 
-    if deltas && (N > 0) && (abs(mₙ′-mₙ) <= 2)
-        p_independent = sqrt(6) * (-1)^(mₙ) * (2*N + 1) * WignerJ2J(N, 0)
-        p_dependent(p) = (-1)^p * T2ϵϵ[p+3] * WignerSymbols.wigner3j(N, 2, N, -mₙ, -p, mₙ′)
-        return p_independent * mapreduce(p_dependent, +, -2:2)
-    else
-        return 0
-    end
-end
+#     if deltas && (N > 0) && (abs(mₙ′-mₙ) <= 2)
+#         p_independent = sqrt(6) * (-1)^(mₙ) * (2*N + 1) * WignerJ2J(N, 0)
+#         p_dependent(p) = (-1)^p * T2ϵϵ[p+3] * WignerSymbols.wigner3j(N, 2, N, -mₙ, -p, mₙ′)
+#         return p_independent * mapreduce(p_dependent, +, -2:2)
+#     else
+#         return 0
+#     end
+# end
 
 function tensor_polarizability(bra::State, ket::State, ϵ::SphericalUnitVector) 
     deltas = δ(bra.N, ket.N) * δ(bra.I, ket.I) * δ(bra.mᵢ, ket.mᵢ)
@@ -563,7 +531,6 @@ function hamiltonian(molecular_parameters::MolecularParameters, N_max::Int, exte
     E_n = SphericalUnitVector(external_fields.E)
 
     dc_stark = B_rot * h_rotation(basis) - dE * h_dipole(basis, E_n)
-    # dc_stark = B_rot * h_rot(basis, ε)
 
     (eqQ_1, eqQ_2) = molecular_parameters.nuclear.eqQᵢ
     (c1, c2) = molecular_parameters.nuclear.cᵢ
@@ -573,7 +540,6 @@ function hamiltonian(molecular_parameters::MolecularParameters, N_max::Int, exte
     spin_spin = c4 * h_nuclear_spin_spin(basis)
 
     hf = quadrupole + spin_rotation + spin_spin
-    # hf = h_quadrupole(molecular_parameters, basis) + h_nuclear_spin_spin(molecular_parameters, basis) + h_nuclear_spin_rotation(molecular_parameters, basis)
 
     B_field = external_fields.B.magnitude
     B_n = SphericalUnitVector(external_fields.B)
@@ -597,12 +563,11 @@ function hamiltonian(molecular_parameters::MolecularParameters, N_max::Int, exte
         ac_stark += (-1) * ((α_par - α_perp) / 3) * h_ac_tensor(basis, SphericalUnitVector(beam)) * I
     end
 
-    # ac_stark = h_ac(molecular_parameters, basis, 0.0, 0.0, 0.0)
     return Array(Hermitian(dc_stark + hf + zeeman + ac_stark))
 end
 
 @testset "Reproduces Ospelkaus et al., PRL 104, 030402 (2010)" begin
-    tolerance = 0.0015 # MHz
+    tolerance = 0.0011 # MHz
 
     fields = ExternalFields(545.9, 0.0)
     h = hamiltonian(KRb_Parameters_Ospelkaus, 5, fields)
