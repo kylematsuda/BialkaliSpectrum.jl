@@ -104,11 +104,8 @@ function h_zeeman_nuclear(basis::Vector{State}, k::Int)
 end
 
 function h_ac_scalar(basis::Vector{State})
-    elts::Int = length(basis)
-    H = Diagonal(ones(elts))
+    H = Diagonal(map(x -> scalar_polarizability(x, x), basis))
     return Hermitian(H)
-    # H = Diagonal(map(x -> scalar_polarizability(x, x), basis))
-    # return Hermitian(H)
 end
 
 function h_ac_tensor_components(basis::Vector{State}, p::Int)
