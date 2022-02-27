@@ -687,7 +687,6 @@ end
             )
 
             # println(errors) # Uncomment to show the errors on every iteration
-
             @test all(errors .< tolerance)
         end
     end
@@ -705,7 +704,6 @@ end
     b_xz = ExternalFields(SphericalVector(B, π/4, 0.0), VectorZ(0.0), [])
     b_xyz = ExternalFields(SphericalVector(B, π/3, π/3), VectorZ(0.0), [])
 
-
     e_z = ExternalFields(0.0, E)
     e_x = ExternalFields(VectorZ(0.0), VectorX(E), [])
     e_y = ExternalFields(VectorZ(0.0), VectorY(E), [])
@@ -722,6 +720,30 @@ end
     
             @test es ≈ energies
         end
+    end
+end
+
+@testset "Trivial azimuthal dependence with one optical field" begin
+    N_max = 5
+    parts = make_hamiltonian_parts(KRb_Parameters_Neyenhuis, N_max)
+
+    B = 545.9
+    E = 0.0
+    I_light = 2350.
+    θ = π/3 # Something random-ish but not on either pole
+
+    fields_z = ExternalFields(VectorZ(B), VectorZ(E), [SphericalVector(I_light, θ, 0.0)])
+    fields_test = [
+        ExternalFields(VectorZ(B), VectorZ(E), [SphericalVector(I_light, θ, φ)])
+        for φ in 0:2π/7:2π
+    ]
+
+    energies = eigvals(hamiltonian(parts, fields_z))
+
+    for f in fields_test
+        es = eigvals(hamiltonian(parts, f))
+
+        @test es ≈ energies
     end
 end
 
