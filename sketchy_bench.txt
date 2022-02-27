@@ -1,5 +1,18 @@
+2/25/21
+
 rotation 0.028
 quadrupole 0.111
 spin spin 0.042
 spin rotation 0.06
 ac 0.041
+
+2/26/21
+
+rotation + dipole 0.112
+quadrupole 0.179
+spin rotation 0.05
+spin spin 0.05
+ac 0.016
+zeeman 0.017
+
+after making everything complex: generating full hamiltonian takes 0.512 s

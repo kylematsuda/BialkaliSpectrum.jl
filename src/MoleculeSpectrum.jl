@@ -288,7 +288,7 @@ function h_rotation(basis::Vector{State})
     return Diagonal(map(x -> rotation_matrix_element(x, x), basis))
 end
 
-function dipole_matrix_element(p::Int, bra::State, ket::State)::Float64
+function dipole_matrix_element(p::Int, bra::State, ket::State)::ComplexF64
     N, mₙ, mᵢ = bra.N, bra.mₙ, bra.mᵢ
     N′, mₙ′, mᵢ′ = ket.N, ket.mₙ, ket.mᵢ
 
@@ -303,7 +303,7 @@ function h_dipole(basis::Vector{State}, E_n::SphericalUnitVector)
     T⁽¹⁾n = T⁽¹⁾(E_n) # Spherical tensor components of E-field unit vector
 
     elts::Int = length(basis)
-    H = spzeros(elts, elts)
+    H = spzeros(ComplexF64, elts, elts)
     for i = 1:elts
         ket = basis[i]
         for j = i:elts
@@ -319,7 +319,7 @@ function h_dipole(basis::Vector{State}, E_n::SphericalUnitVector)
     return Hermitian(H)
 end
 
-function nuclear_quadrupole(k::Int, bra::State, ket::State)::Float64
+function nuclear_quadrupole(k::Int, bra::State, ket::State)::ComplexF64
     N, mₙ, I, mᵢ = bra.N, bra.mₙ, bra.I[k], bra.mᵢ[k]
     N′, mₙ′, I′, mᵢ′ = ket.N, ket.mₙ, ket.I[k], ket.mᵢ[k]
 
@@ -342,7 +342,7 @@ end
 
 function h_quadrupole(k::Int, basis::Vector{State})
     elts::Int = length(basis)
-    H = spzeros(elts, elts)
+    H = spzeros(ComplexF64, elts, elts)
 
     for i = 1:elts
         ket = basis[i]
@@ -354,7 +354,7 @@ function h_quadrupole(k::Int, basis::Vector{State})
     return Hermitian(H)
 end
 
-function nuclear_spin_spin(bra::State, ket::State)::Float64
+function nuclear_spin_spin(bra::State, ket::State)::ComplexF64
     if δ(bra.N, ket.N) && δ(bra.mₙ, ket.mₙ) && 
         (ket.mᵢ[1] - bra.mᵢ[1] == bra.mᵢ[2] - ket.mᵢ[2])
 
@@ -366,7 +366,7 @@ end
 
 function h_nuclear_spin_spin(basis::Vector{State})
     elts::Int = length(basis)
-    H = spzeros(elts, elts)
+    H = spzeros(ComplexF64, elts, elts)
     for i = 1:elts
         ket = basis[i]
         for j = i:elts
@@ -377,7 +377,7 @@ function h_nuclear_spin_spin(basis::Vector{State})
     return Hermitian(H)
 end
 
-function nuclear_spin_rotation(k::Int, bra::State, ket::State)::Float64
+function nuclear_spin_rotation(k::Int, bra::State, ket::State)::ComplexF64
     other = (k % 2) + 1 # States of other nucleus should Kronecker delta
     other_nucleus = δ(bra.I[other], ket.I[other]) * δ(bra.mᵢ[other], ket.mᵢ[other])
 
@@ -390,7 +390,7 @@ end
 
 function h_nuclear_spin_rotation(k::Int, basis::Vector{State})
     elts::Int = length(basis)
-    H = spzeros(elts, elts)
+    H = spzeros(ComplexF64, elts, elts)
     for i = 1:elts
         ket = basis[i]
         for j = i:elts
@@ -405,7 +405,7 @@ function h_zeeman_rotation(basis::Vector{State}, B_n::SphericalUnitVector)
     T⁽¹⁾B = T⁽¹⁾(B_n)
 
     elts::Int = length(basis)
-    H = spzeros(elts, elts)
+    H = spzeros(ComplexF64, elts, elts)
     for i = 1:elts
         ket = basis[i]
         for j = i:elts
@@ -416,14 +416,14 @@ function h_zeeman_rotation(basis::Vector{State}, B_n::SphericalUnitVector)
             end
         end
     end
-    return H
+    return Hermitian(H)
 end
 
 function h_zeeman_nuclear(basis::Vector{State}, k::Int, B_n::SphericalUnitVector)
     T⁽¹⁾B = T⁽¹⁾(B_n)
 
     elts::Int = length(basis)
-    H = spzeros(elts, elts)
+    H = spzeros(ComplexF64, elts, elts)
     for i = 1:elts
         ket = basis[i]
         for j = i:elts
@@ -438,7 +438,7 @@ function h_zeeman_nuclear(basis::Vector{State}, k::Int, B_n::SphericalUnitVector
             end
         end
     end
-    return H
+    return Hermitian(H)
 end
 
 scalar_polarizability(bra::State, ket::State) = δ(bra, ket)
@@ -465,7 +465,7 @@ function h_ac(molecular_parameters::MolecularParameters, basis::Vector{State}, I
     T2ϵϵ = T2pol(θ_laser, φ_laser)
 
     elts::Int = length(basis)
-    H = spzeros(elts, elts)
+    H = spzeros(ComplexF64, elts, elts)
     for i = 1:elts
         ket = basis[i]
         for j = i:elts
@@ -486,7 +486,7 @@ end
 
 function h_ac_tensor(basis::Vector{State}, ϵ::SphericalUnitVector)
     elts::Int = length(basis)
-    H = spzeros(elts, elts)
+    H = spzeros(ComplexF64, elts, elts)
     for i = 1:elts
         ket = basis[i]
         for j = i:elts
@@ -530,7 +530,7 @@ function hamiltonian(molecular_parameters::MolecularParameters, N_max::Int, exte
     α_par = molecular_parameters.α.α_par
     α_perp = molecular_parameters.α.α_perp
 
-    ac_stark = spzeros(length(basis), length(basis))
+    ac_stark = spzeros(ComplexF64, length(basis), length(basis))
     for beam in external_fields.Optical
         I = beam.magnitude
         ac_stark += (-1) * ((α_par + 2α_perp) / 3) * h_ac_scalar(basis) * I
@@ -541,10 +541,11 @@ function hamiltonian(molecular_parameters::MolecularParameters, N_max::Int, exte
 end
 
 @testset "Reproduces Ospelkaus et al., PRL 104, 030402 (2010)" begin
+    N_max = 5
     tolerance = 0.0011 # MHz
 
     fields = ExternalFields(545.9, 0.0)
-    h = hamiltonian(KRb_Parameters_Ospelkaus, 5, fields)
+    h = hamiltonian(KRb_Parameters_Ospelkaus, N_max, fields)
     energies = eigvals(h)
     states = eigvecs(h)
 
@@ -571,10 +572,11 @@ end
 end
 
 @testset "Reproduces Neyenhuis et al., PRL 109, 230403 (2012)" begin
+    N_max = 5
     tolerance = 0.005 # MHz
 
     fields = ExternalFields(545.9, 0.0)
-    h = hamiltonian(KRb_Parameters_Neyenhuis, 5, fields)
+    h = hamiltonian(KRb_Parameters_Neyenhuis, N_max, fields)
     energies = eigvals(h)
     states = eigvecs(h)
 
@@ -590,6 +592,32 @@ end
         expected = c[3]
 
         @test abs(transition - expected) < tolerance
+    end
+end
+
+@testset "Trivial angular dependence with one field" begin
+    N_max = 5
+    B = 545.9
+    E = 1000.0
+
+    b_z = ExternalFields(B, 0.0)
+    b_x = ExternalFields(VectorX(B), VectorZ(0.0), [])
+    b_y = ExternalFields(VectorY(B), VectorZ(0.0), [])
+
+    e_z = ExternalFields(0.0, E)
+    e_x = ExternalFields(VectorZ(0.0), VectorX(E), [])
+    e_y = ExternalFields(VectorZ(0.0), VectorY(E), [])
+
+    for fields in [(b_z, (b_x, b_y)), (e_z, (e_x, e_y))]
+        h_z = hamiltonian(KRb_Parameters_Neyenhuis, N_max, fields[1])
+        energies = eigvals(h_z)
+
+        for f in fields[2]
+            h = hamiltonian(KRb_Parameters_Neyenhuis, N_max, f)
+            es = eigvals(h)
+    
+            @test es ≈ energies
+        end
     end
 end
 
