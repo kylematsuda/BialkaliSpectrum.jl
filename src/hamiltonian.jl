@@ -67,9 +67,11 @@ function h_zeeman_rotation_components(basis::Vector{State}, p::Int)
         for j = i:elts
             bra = basis[j]
 
-            if δ(bra.I, ket.I) && δ(bra.mᵢ, ket.mᵢ)
-                H[i, j] = T⁽¹⁾N(p, bra, ket)
-            end
+            H[i, j] = zeeman_rotation(p, bra, ket)
+
+            # if δ(bra.I, ket.I) && δ(bra.mᵢ, ket.mᵢ)
+            #     H[i, j] = T⁽¹⁾N(p, bra, ket)
+            # end
         end
     end
     return Hermitian(H)
@@ -87,13 +89,14 @@ function h_zeeman_nuclear_components(basis::Vector{State}, k::Int, p::Int)
         for j = i:elts
             bra = basis[j]
 
-            other = 1 + (k % 2)
-            rotation = δ(bra.N, ket.N) && δ(bra.mₙ, ket.mₙ)
-            I_other = δ(bra.I[other], ket.I[other]) && δ(bra.mᵢ[other], ket.mᵢ[other])
+            # other = 1 + (k % 2)
+            # rotation = δ(bra.N, ket.N) && δ(bra.mₙ, ket.mₙ)
+            # I_other = δ(bra.I[other], ket.I[other]) && δ(bra.mᵢ[other], ket.mᵢ[other])
 
-            if rotation && I_other
-                H[i, j] = T⁽¹⁾Iₖ(p, k, bra, ket)
-            end
+            # if rotation && I_other
+            #     H[i, j] = T⁽¹⁾Iₖ(p, k, bra, ket)
+            # end
+            H[i, j] = zeeman_nuclear(k, p, bra, ket)
         end
     end
     return Hermitian(H)

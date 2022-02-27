@@ -93,6 +93,26 @@ function nuclear_spin_rotation(k::Int, bra::State, ket::State)::ComplexF64
     end
 end
 
+function zeeman_rotation(p::Int, bra::State, ket::State)::ComplexF64
+    if δ(bra.I, ket.I) && δ(bra.mᵢ, ket.mᵢ)
+        return T⁽¹⁾N(p, bra, ket)
+    else
+        return 0
+    end
+end
+
+function zeeman_nuclear(k::Int, p::Int, bra::State, ket::State)::ComplexF64
+    other = 1 + (k % 2)
+    rotation = δ(bra.N, ket.N) && δ(bra.mₙ, ket.mₙ)
+    I_other = δ(bra.I[other], ket.I[other]) && δ(bra.mᵢ[other], ket.mᵢ[other])
+
+    if rotation && I_other
+        return T⁽¹⁾Iₖ(p, k, bra, ket)
+    else
+        return 0
+    end
+end
+
 scalar_polarizability(bra::State, ket::State) = δ(bra, ket)
 
 function tensor_polarizability(bra::State, ket::State, p::Int) 
