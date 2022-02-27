@@ -52,27 +52,6 @@ h_zeeman_nuclear(basis, k) = h_rank_1(basis, (p, bra, ket) -> zeeman_nuclear(k, 
 h_ac_scalar(basis) = h_diagonal(basis, scalar_polarizability)
 h_ac_tensor(basis) = h_rank_2(basis, tensor_polarizability)
 
-struct HamiltonianParts
-    rotation
-    dipole::SVector{3}
-    hyperfine
-    zeeman::SVector{3}
-    ac_scalar
-    ac_tensor::SVector{5}
-end
-
-function make_hamiltonian_parts(molecular_parameters::MolecularParameters, N_max::Int)::HamiltonianParts
-    basis = generate_basis(molecular_parameters, N_max)
-
-    rotation = molecular_parameters.Bᵣ * h_rotation(basis)
-    dipole = (-1) * molecular_parameters.dₚ * Constants.DVcm⁻¹ToMHz * h_dipole(basis)
-    hyperfine = make_hyperfine(molecular_parameters, basis)
-    zeeman = make_zeeman(molecular_parameters, basis)
-    (ac_scalar, ac_tensor) = make_ac(molecular_parameters, basis)
-
-    return HamiltonianParts(rotation, dipole, hyperfine, zeeman, ac_scalar, ac_tensor)
-end
-
 function make_hyperfine(molecular_parameters::MolecularParameters, basis::Vector{State})
     eqQᵢ = molecular_parameters.nuclear.eqQᵢ
     quadrupole = mapreduce(k -> (1/4) * eqQᵢ[k] * h_quadrupole(basis, k), +, 1:2)
@@ -108,6 +87,27 @@ function make_ac(molecular_parameters::MolecularParameters, basis::Vector{State}
     ac_tensor = (-1) * ((α_par - α_perp) / 3) * h_ac_tensor(basis)
 
     return (ac_scalar, ac_tensor)
+end
+
+struct HamiltonianParts
+    rotation
+    dipole::SVector{3}
+    hyperfine
+    zeeman::SVector{3}
+    ac_scalar
+    ac_tensor::SVector{5}
+end
+
+function make_hamiltonian_parts(molecular_parameters::MolecularParameters, N_max::Int)::HamiltonianParts
+    basis = generate_basis(molecular_parameters, N_max)
+
+    rotation = molecular_parameters.Bᵣ * h_rotation(basis)
+    dipole = (-1) * molecular_parameters.dₚ * Constants.DVcm⁻¹ToMHz * h_dipole(basis)
+    hyperfine = make_hyperfine(molecular_parameters, basis)
+    zeeman = make_zeeman(molecular_parameters, basis)
+    (ac_scalar, ac_tensor) = make_ac(molecular_parameters, basis)
+
+    return HamiltonianParts(rotation, dipole, hyperfine, zeeman, ac_scalar, ac_tensor)
 end
 
 function hamiltonian(parts::HamiltonianParts, external_fields::ExternalFields)
