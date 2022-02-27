@@ -232,9 +232,12 @@ function max_overlap_with(s::State, eigenvectors::Matrix)
     )
 end
 
-function energy_difference(g::State, e::State, energies::Vector, eigenvectors::Matrix)
-    indices = map(x -> max_overlap_with(x, eigenvectors)[2], [e, g])
-    return mapreduce(x -> energies[x], -, indices)
+function get_energy(s::State, energies::Vector, eigenvectors::Matrix)
+    return energies[max_overlap_with(s, eigenvectors)[2]]
+end
+
+function get_energy_difference(g::State, e::State, energies::Vector, eigenvectors::Matrix)
+    return mapreduce(x -> get_energy(x, energies, eigenvectors), -, [e, g])
 end
 
 function generate_basis(molecular_parameters::MolecularParameters, N_max::Int)
@@ -298,26 +301,6 @@ function dipole_matrix_element(p::Int, bra::State, ket::State)::ComplexF64
         return 0
     end
 end
-
-# function h_dipole(basis::Vector{State}, E_n::SphericalUnitVector)
-#     T⁽¹⁾n = T⁽¹⁾(E_n) # Spherical tensor components of E-field unit vector
-
-#     elts::Int = length(basis)
-#     H = spzeros(ComplexF64, elts, elts)
-#     for i = 1:elts
-#         ket = basis[i]
-#         for j = i:elts
-#             bra = basis[j]
-#             matrix_elements = [dipole_matrix_element(p, bra, ket) for p in -1:1]
-
-#             # dot() conjugates the first argument
-#             # Recall T^k(A)⋅T^k(B) = ∑ (-1)^p T^k_p (A) T^k_{-p}(B)
-#             # Since T^k_{-p} (A) = (-1)^p * conj(T^k_p (A)), the dot product gives the correct expression
-#             H[i, j] = dot(T⁽¹⁾n, matrix_elements)
-#         end
-#     end
-#     return Hermitian(H)
-# end
 
 function h_dipole_components(basis::Vector{State}, p::Int)
     elts::Int = length(basis)
@@ -418,24 +401,6 @@ function h_nuclear_spin_rotation(k::Int, basis::Vector{State})
     return Hermitian(H)
 end
 
-# function h_zeeman_rotation(basis::Vector{State}, B_n::SphericalUnitVector)
-#     T⁽¹⁾B = T⁽¹⁾(B_n)
-
-#     elts::Int = length(basis)
-#     H = spzeros(ComplexF64, elts, elts)
-#     for i = 1:elts
-#         ket = basis[i]
-#         for j = i:elts
-#             bra = basis[j]
-
-#             if δ(bra.I, ket.I) && δ(bra.mᵢ, ket.mᵢ)
-#                 H[i, j] = dot(T⁽¹⁾B, [T⁽¹⁾N(p, bra, ket) for p in -1:1])
-#             end
-#         end
-#     end
-#     return Hermitian(H)
-# end
-
 function h_zeeman_rotation_components(basis::Vector{State}, p::Int)
     elts::Int = length(basis)
     H = spzeros(ComplexF64, elts, elts)
@@ -455,28 +420,6 @@ end
 function h_zeeman_rotation(basis::Vector{State})
     return [h_zeeman_rotation_components(basis, p) for p in -1:1]
 end
-
-# function h_zeeman_nuclear(basis::Vector{State}, k::Int, B_n::SphericalUnitVector)
-#     T⁽¹⁾B = T⁽¹⁾(B_n)
-
-#     elts::Int = length(basis)
-#     H = spzeros(ComplexF64, elts, elts)
-#     for i = 1:elts
-#         ket = basis[i]
-#         for j = i:elts
-#             bra = basis[j]
-
-#             other = 1 + (k % 2)
-#             rotation = δ(bra.N, ket.N) && δ(bra.mₙ, ket.mₙ)
-#             I_other = δ(bra.I[other], ket.I[other]) && δ(bra.mᵢ[other], ket.mᵢ[other])
-
-#             if rotation && I_other
-#                 H[i, j] = dot(T⁽¹⁾B, [T⁽¹⁾Iₖ(p, k, bra, ket) for p in -1:1])
-#             end
-#         end
-#     end
-#     return Hermitian(H)
-# end
 
 function h_zeeman_nuclear_components(basis::Vector{State}, k::Int, p::Int)
     elts::Int = length(basis)
@@ -504,35 +447,13 @@ end
 
 scalar_polarizability(bra::State, ket::State) = δ(bra, ket)
 
-# function tensor_polarizability(bra::State, ket::State, ϵ::SphericalUnitVector) 
-#     deltas = δ(bra.N, ket.N) * δ(bra.I, ket.I) * δ(bra.mᵢ, ket.mᵢ)
-#     N, mₙ = bra.N, bra.mₙ
-#     mₙ′ = ket.mₙ
-
-#     T⁽²⁾ϵϵ = T⁽²⁾(ϵ)
-
-#     if deltas && (N > 0) && (abs(mₙ′-mₙ) <= 2)
-#         p_independent = sqrt(6) * (-1)^(mₙ) * (2*N + 1) * WignerJ2J(N, 0)
-#         p_dependent(p) = (-1)^p * T⁽²⁾ϵϵ[p+3] * WignerSymbols.wigner3j(N, 2, N, -mₙ, -p, mₙ′)
-#         return p_independent * mapreduce(p_dependent, +, -2:2)
-#     else
-#         return 0
-#     end
-# end
-
 function tensor_polarizability(bra::State, ket::State, p::Int) 
     deltas = δ(bra.N, ket.N) * δ(bra.I, ket.I) * δ(bra.mᵢ, ket.mᵢ)
     N, mₙ = bra.N, bra.mₙ
     mₙ′ = ket.mₙ
 
-    # T⁽²⁾ϵϵ = T⁽²⁾(ϵ)
-
-    if deltas && (N > 0) && (mₙ′- mₙ + p == 0)
+    if deltas && (N > 0) && (mₙ′- mₙ - p == 0)
         return sqrt(6) * (-1)^(mₙ) * (2*N + 1) * WignerJ2J(N, 0) * WignerSymbols.wigner3j(N, 2, N, -mₙ, -p, mₙ′)
-
-        # p_independent = sqrt(6) * (-1)^(mₙ) * (2*N + 1) * WignerJ2J(N, 0)
-        # p_dependent(p) = (-1)^p * T⁽²⁾ϵϵ[p+3] * WignerSymbols.wigner3j(N, 2, N, -mₙ, -p, mₙ′)
-        # return p_independent * mapreduce(p_dependent, +, -2:2)
     else
         return 0
     end
@@ -543,19 +464,6 @@ function h_ac_scalar(basis::Vector{State})
     H = Diagonal(ones(elts))
     return Hermitian(H)
 end
-
-# function h_ac_tensor(basis::Vector{State}, ϵ::SphericalUnitVector)
-#     elts::Int = length(basis)
-#     H = spzeros(ComplexF64, elts, elts)
-#     for i = 1:elts
-#         ket = basis[i]
-#         for j = i:elts
-#             bra = basis[j]
-#             H[i, j] = tensor_polarizability(bra, ket, ϵ)
-#         end
-#     end
-#     return Hermitian(H)
-# end
 
 function h_ac_tensor_components(basis::Vector{State}, p::Int)
     elts::Int = length(basis)
@@ -625,6 +533,7 @@ function make_zeeman(molecular_parameters::MolecularParameters, basis::Vector{St
     σᵢ = molecular_parameters.zeeman.σᵢ
     prefactors = [gᵢ[k] * μN * (1 - σᵢ[k]) for k in 1:2]
     zeeman_i = mapreduce(k -> prefactors[k] * h_zeeman_nuclear(basis, k), +, 1:2)
+
     return (-1) * (zeeman_n + zeeman_i)
 end
 
@@ -659,54 +568,6 @@ function hamiltonian(parts::HamiltonianParts, external_fields::ExternalFields)
     return Array(Hermitian(h))
 end
 
-# function hamiltonian(molecular_parameters::MolecularParameters, N_max::Int, external_fields::ExternalFields)
-#     basis = generate_basis(molecular_parameters, N_max)
-    
-#     B_rot = molecular_parameters.Bᵣ
-#     dE = (molecular_parameters.dₚ * external_fields.E.magnitude) * Constants.DVcm⁻¹ToMHz
-#     E_n = SphericalUnitVector(external_fields.E)
-
-#     # dc_stark = B_rot * h_rotation(basis) - dE * spherical_vector_dot_hamiltonian(E_n, [h_dipole(basis, p) for p in -1:1])
-#     dc_stark = B_rot * h_rotation(basis) - dE * tensor_dot(T⁽¹⁾(E_n), [h_dipole(basis, p) for p in -1:1])
-
-#     (eqQ_1, eqQ_2) = molecular_parameters.nuclear.eqQᵢ
-#     (c1, c2) = molecular_parameters.nuclear.cᵢ
-#     c4 = molecular_parameters.nuclear.c₄
-#     quadrupole = (1/4)*(eqQ_1 * h_quadrupole(1, basis) + eqQ_2 * h_quadrupole(2, basis))
-#     spin_rotation = c1 * h_nuclear_spin_rotation(1, basis) + c2 * h_nuclear_spin_rotation(2, basis)
-#     spin_spin = c4 * h_nuclear_spin_spin(basis)
-
-#     hf = quadrupole + spin_rotation + spin_spin
-
-#     B_field = external_fields.B.magnitude
-#     B_n = SphericalUnitVector(external_fields.B)
-#     μN = Constants.μN
-#     gr = molecular_parameters.zeeman.gᵣ
-#     (g1, g2) = molecular_parameters.zeeman.gᵢ
-#     (σ1, σ2) = molecular_parameters.zeeman.σᵢ
-#     # zeeman_rotation = -μN * B_field * gr * h_zeeman_rotation(basis, B_n)
-#     zeeman_rotation = -μN * B_field * gr * tensor_dot(T⁽¹⁾(B_n), [h_zeeman_rotation(basis, p) for p in -1:1])
-
-#     (hzn1, hzn2) = [tensor_dot(T⁽¹⁾(B_n), [h_zeeman_nuclear(basis, k, p) for p in -1:1]) for k in 1:2]
-#     zeeman_nuclear = -μN * B_field * (g1*(1-σ1)*hzn1 + g2*(1-σ2)*hzn2)
-#     zeeman = zeeman_rotation + zeeman_nuclear
-
-#     α_par = molecular_parameters.α.α_par
-#     α_perp = molecular_parameters.α.α_perp
-
-#     ac_stark = spzeros(ComplexF64, length(basis), length(basis))
-#     for beam in external_fields.Optical
-#         I = beam.magnitude
-#         ϵ = SphericalUnitVector(beam)
-#         ac_stark += (-1) * ((α_par + 2α_perp) / 3) * h_ac_scalar(basis) * I
-
-#         h_tensor = tensor_dot(T⁽²⁾(ϵ) , [h_ac_tensor(basis, p) for p in -2:2])
-#         ac_stark += (-1) * ((α_par - α_perp) / 3) * h_tensor * I
-#     end
-
-#     return Array(Hermitian(dc_stark + hf + zeeman + ac_stark))
-# end
-
 @testset "Reproduces Ospelkaus et al., PRL 104, 030402 (2010)" begin
     N_max = 5
     tolerance = 0.0011 # MHz
@@ -732,35 +593,103 @@ end
 
     for c in comparisons
         (g, e) = map(i -> State(c[i]...), 1:2)
-        transition = energy_difference(g, e, energies, states)
+        transition = get_energy_difference(g, e, energies, states)
         expected = c[3]
 
         @test abs(transition - expected) < tolerance
     end
 end
 
-@testset "Reproduces Neyenhuis et al., PRL 109, 230403 (2012)" begin
+@testset verbose=true "Reproduces Neyenhuis et al., PRL 109, 230403 (2012)" begin
     N_max = 5
-    tolerance = 0.005 # MHz
-
-    fields = ExternalFields(545.9, 0.0)
     parts = make_hamiltonian_parts(KRb_Parameters_Neyenhuis, N_max)
+    B = 545.9
+
+    fields = ExternalFields(B, 0.0)
     h = hamiltonian(parts, fields)
     energies = eigvals(h)
     states = eigvecs(h)
 
-    comparisons = [
-        ((0, 0, -4, 1/2), (1, 1, -4, 1/2),  2227.842),
-        ((0, 0, -4, 1/2), (1, 0, -4, 1/2),  2228.110),
-        ((0, 0, -4, 1/2), (1, -1, -4, 1/2), 2227.784),
-    ]
+    @testset "No optical fields" begin
+        tolerance = 0.005 # MHz
 
-    for c in comparisons
-        (g, e) = map(i -> State(c[i]...), 1:2)
-        transition = energy_difference(g, e, energies, states)
-        expected = c[3]
+        comparisons = [
+            ((0, 0, -4, 1/2), (1, 1, -4, 1/2),  2227.842),
+            ((0, 0, -4, 1/2), (1, 0, -4, 1/2),  2228.110),
+            ((0, 0, -4, 1/2), (1, -1, -4, 1/2), 2227.784),
+        ]
 
-        @test abs(transition - expected) < tolerance
+        for c in comparisons
+            (g, e) = map(i -> State(c[i]...), 1:2)
+            transition = get_energy_difference(g, e, energies, states)
+            expected = c[3]
+
+            @test abs(transition - expected) < tolerance
+        end
+    end
+
+    @testset "α(θ)" begin
+        I_light = 2350.
+        tolerance = 0.035 # Relative tolerance in α
+
+        # These are generated by diagonalizing the simplified Hamiltonian H from the
+        # main text and plugging in the experimental values for α_parallel and α_perpendicular.
+        # A few % tolerance seems reasonable given that these values come from the simplified Hamiltonian.
+        #
+        # Note: The supplement shows the full calculation (which should match this, in principle).
+        comparisons = [
+            # θ, m =  -1,      +1,      0
+            (0.0,   46.4e-6, 46.4e-6, 73.2e-6),
+            (10.0,  46.9e-6, 46.9e-6, 72.2e-6),
+            (20.0,  48.4e-6, 48.2e-6, 69.4e-6),
+            (30.0,  50.9e-6, 49.8e-6, 65.3e-6),
+            (40.0,  54.0e-6, 51.2e-6, 60.7e-6),
+            (50.0,  57.5e-6, 52.4e-6, 56.2e-6),
+            (60.0,  60.7e-6, 53.1e-6, 52.2e-6),
+            (70.0,  63.3e-6, 53.6e-6, 49.0e-6),
+            (80.0,  65.0e-6, 53.9e-6, 47.1e-6),
+            (90.0,  65.6e-6, 54.0e-6, 46.4e-6),
+        ]
+        α00 = 55.3e-6
+
+        states_to_check = [
+            (0, 0, -4, 1/2),
+            (1, -1, -4, 1/2),
+            (1, 1, -4, 1/2),
+            (1, 0, -4, 1/2),
+        ]
+
+        es = map(x -> get_energy(State(x...), energies, states), states_to_check)
+
+        for c in comparisons
+            θ = c[1] * π/180
+            optical = SphericalVector(I_light, θ, 0.0)
+            fields_with_light = ExternalFields(VectorZ(B), VectorZ(0.0), [optical])
+
+            h_light = hamiltonian(parts, fields_with_light)
+            energies_light = eigvals(h_light)
+            states_light = eigvecs(h_light)
+
+            es_light = map(
+                x -> get_energy(State(x...), energies_light, states_light),
+                states_to_check
+            )
+
+            αs = map(
+                k -> -(es_light[k] - es[k]) / I_light,
+                eachindex(es)
+            )
+            expected = [α00, c[2:end]...]
+            
+            errors = map(
+                k -> abs(1 - (expected[k] / αs[k])),
+                eachindex(expected)
+            )
+
+            # println(errors) # Uncomment to show the errors on every iteration
+
+            @test all(errors .< tolerance)
+        end
     end
 end
 
@@ -773,12 +702,17 @@ end
     b_z = ExternalFields(B, 0.0)
     b_x = ExternalFields(VectorX(B), VectorZ(0.0), [])
     b_y = ExternalFields(VectorY(B), VectorZ(0.0), [])
+    b_xz = ExternalFields(SphericalVector(B, π/4, 0.0), VectorZ(0.0), [])
+    b_xyz = ExternalFields(SphericalVector(B, π/3, π/3), VectorZ(0.0), [])
+
 
     e_z = ExternalFields(0.0, E)
     e_x = ExternalFields(VectorZ(0.0), VectorX(E), [])
     e_y = ExternalFields(VectorZ(0.0), VectorY(E), [])
+    e_xz = ExternalFields(VectorZ(0.0), SphericalVector(E, π/4, 0.0), [])
+    e_xyz = ExternalFields(VectorZ(0.0), SphericalVector(E, π/3, π/3), [])
 
-    for fields in [(b_z, (b_x, b_y)), (e_z, (e_x, e_y))]
+    for fields in [(b_z, (b_x, b_y, b_xz, b_xyz)), (e_z, (e_x, e_y, e_xz, e_xyz))]
         h_z = hamiltonian(parts, fields[1])
         energies = eigvals(h_z)
 
