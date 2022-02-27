@@ -319,6 +319,19 @@ function h_dipole(basis::Vector{State}, E_n::SphericalUnitVector)
     return Hermitian(H)
 end
 
+function h_dipole(basis::Vector{State}, p::Int)
+    elts::Int = length(basis)
+    H = spzeros(ComplexF64, elts, elts)
+    for i = 1:elts
+        ket = basis[i]
+        for j = i:elts
+            bra = basis[j]
+            H[i, j] = dipole_matrix_element(p, bra, ket)
+        end
+    end
+    return Hermitian(H)
+end
+
 function nuclear_quadrupole(k::Int, bra::State, ket::State)::ComplexF64
     N, mₙ, I, mᵢ = bra.N, bra.mₙ, bra.I[k], bra.mᵢ[k]
     N′, mₙ′, I′, mᵢ′ = ket.N, ket.mₙ, ket.I[k], ket.mᵢ[k]
@@ -419,6 +432,22 @@ function h_zeeman_rotation(basis::Vector{State}, B_n::SphericalUnitVector)
     return Hermitian(H)
 end
 
+function h_zeeman_rotation(basis::Vector{State}, p::Int)
+    elts::Int = length(basis)
+    H = spzeros(ComplexF64, elts, elts)
+    for i = 1:elts
+        ket = basis[i]
+        for j = i:elts
+            bra = basis[j]
+
+            if δ(bra.I, ket.I) && δ(bra.mᵢ, ket.mᵢ)
+                H[i, j] = T⁽¹⁾N(p, bra, ket)
+            end
+        end
+    end
+    return Hermitian(H)
+end
+
 function h_zeeman_nuclear(basis::Vector{State}, k::Int, B_n::SphericalUnitVector)
     T⁽¹⁾B = T⁽¹⁾(B_n)
 
@@ -435,6 +464,26 @@ function h_zeeman_nuclear(basis::Vector{State}, k::Int, B_n::SphericalUnitVector
 
             if rotation && I_other
                 H[i, j] = dot(T⁽¹⁾B, [T⁽¹⁾Iₖ(p, k, bra, ket) for p in -1:1])
+            end
+        end
+    end
+    return Hermitian(H)
+end
+
+function h_zeeman_nuclear(basis::Vector{State}, k::Int, p::Int)
+    elts::Int = length(basis)
+    H = spzeros(ComplexF64, elts, elts)
+    for i = 1:elts
+        ket = basis[i]
+        for j = i:elts
+            bra = basis[j]
+
+            other = 1 + (k % 2)
+            rotation = δ(bra.N, ket.N) && δ(bra.mₙ, ket.mₙ)
+            I_other = δ(bra.I[other], ket.I[other]) && δ(bra.mᵢ[other], ket.mᵢ[other])
+
+            if rotation && I_other
+                H[i, j] = T⁽¹⁾Iₖ(p, k, bra, ket)
             end
         end
     end
@@ -459,23 +508,22 @@ function tensor_polarizability(bra::State, ket::State, ϵ::SphericalUnitVector)
     end
 end
 
-function h_ac(molecular_parameters::MolecularParameters, basis::Vector{State}, I_laser::Float64, θ_laser::Float64, φ_laser::Float64)
-    α_par = molecular_parameters.α.α_par
-    α_perp = molecular_parameters.α.α_perp
-    T2ϵϵ = T2pol(θ_laser, φ_laser)
+function tensor_polarizability(bra::State, ket::State, p::Int) 
+    deltas = δ(bra.N, ket.N) * δ(bra.I, ket.I) * δ(bra.mᵢ, ket.mᵢ)
+    N, mₙ = bra.N, bra.mₙ
+    mₙ′ = ket.mₙ
 
-    elts::Int = length(basis)
-    H = spzeros(ComplexF64, elts, elts)
-    for i = 1:elts
-        ket = basis[i]
-        for j = i:elts
-            bra = basis[j]
-            scalar = ((α_par + 2 * α_perp) / 3) * scalar_polarizability(bra, ket)
-            tensor = ((α_par - α_perp) / 3) * tensor_polarizability(bra, ket, T2ϵϵ)
-            H[i, j] = -(scalar + tensor) * I_laser
-        end
+    T⁽²⁾ϵϵ = T⁽²⁾(ϵ)
+
+    if deltas && (N > 0) && (mₙ′- mₙ + p == 0)
+        return sqrt(6) * (-1)^(mₙ) * (2*N + 1) * WignerJ2J(N, 0) * WignerSymbols.wigner3j(N, 2, N, -mₙ, -p, mₙ′)
+
+        # p_independent = sqrt(6) * (-1)^(mₙ) * (2*N + 1) * WignerJ2J(N, 0)
+        # p_dependent(p) = (-1)^p * T⁽²⁾ϵϵ[p+3] * WignerSymbols.wigner3j(N, 2, N, -mₙ, -p, mₙ′)
+        # return p_independent * mapreduce(p_dependent, +, -2:2)
+    else
+        return 0
     end
-    return Hermitian(H)
 end
 
 function h_ac_scalar(basis::Vector{State})
@@ -497,6 +545,31 @@ function h_ac_tensor(basis::Vector{State}, ϵ::SphericalUnitVector)
     return Hermitian(H)
 end
 
+function h_ac_tensor(basis::Vector{State}, p::Int)
+    elts::Int = length(basis)
+    H = spzeros(ComplexF64, elts, elts)
+    for i = 1:elts
+        ket = basis[i]
+        for j = i:elts
+            bra = basis[j]
+            H[i, j] = tensor_polarizability(bra, ket, p)
+        end
+    end
+    return Hermitian(H)
+end
+
+function spherical_vector_dot_hamiltonian(field::SphericalUnitVector, hams)
+    tensor = T⁽¹⁾(field)
+    mapreduce(p -> conj(tensor[p]) .* hams[p], +, eachindex(tensor))
+end
+
+function tensor_dot(a, b)
+    @assert size(a, 1) == size(b, 1)
+    @assert isodd(size(a, 1))
+
+    mapreduce(p -> conj(a[p]) .* conj(b[p]), +, eachindex(a))
+end
+
 function hamiltonian(molecular_parameters::MolecularParameters, N_max::Int, external_fields::ExternalFields)
     basis = generate_basis(molecular_parameters, N_max)
     
@@ -504,7 +577,8 @@ function hamiltonian(molecular_parameters::MolecularParameters, N_max::Int, exte
     dE = (molecular_parameters.dₚ * external_fields.E.magnitude) * Constants.DVcm⁻¹ToMHz
     E_n = SphericalUnitVector(external_fields.E)
 
-    dc_stark = B_rot * h_rotation(basis) - dE * h_dipole(basis, E_n)
+    # dc_stark = B_rot * h_rotation(basis) - dE * spherical_vector_dot_hamiltonian(E_n, [h_dipole(basis, p) for p in -1:1])
+    dc_stark = B_rot * h_rotation(basis) - dE * tensor_dot(T⁽¹⁾(E_n), [h_dipole(basis, p) for p in -1:1])
 
     (eqQ_1, eqQ_2) = molecular_parameters.nuclear.eqQᵢ
     (c1, c2) = molecular_parameters.nuclear.cᵢ
@@ -521,9 +595,10 @@ function hamiltonian(molecular_parameters::MolecularParameters, N_max::Int, exte
     gr = molecular_parameters.zeeman.gᵣ
     (g1, g2) = molecular_parameters.zeeman.gᵢ
     (σ1, σ2) = molecular_parameters.zeeman.σᵢ
-    zeeman_rotation = -μN * B_field * gr * h_zeeman_rotation(basis, B_n)
+    # zeeman_rotation = -μN * B_field * gr * h_zeeman_rotation(basis, B_n)
+    zeeman_rotation = -μN * B_field * gr * tensor_dot(T⁽¹⁾(B_n), [h_zeeman_rotation(basis, p) for p in -1:1])
 
-    (hzn1, hzn2) = [h_zeeman_nuclear(basis, k, B_n) for k in 1:2]
+    (hzn1, hzn2) = [tensor_dot(T⁽¹⁾(B_n), [h_zeeman_nuclear(basis, k, p) for p in -1:1]) for k in 1:2]
     zeeman_nuclear = -μN * B_field * (g1*(1-σ1)*hzn1 + g2*(1-σ2)*hzn2)
     zeeman = zeeman_rotation + zeeman_nuclear
 
