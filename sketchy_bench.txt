@@ -16,3 +16,7 @@ ac 0.016
 zeeman 0.017
 
 after making everything complex: generating full hamiltonian takes 0.512 s
+
+after factoring everything out:
+    make_hamiltonian_parts = 0.555
+    hamiltonian = 0.214
