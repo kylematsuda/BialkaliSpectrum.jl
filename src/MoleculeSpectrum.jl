@@ -102,7 +102,7 @@ function calculate_spectrum(
 end
 
 """
-    transition_strengths(spectrum, g, frequency_range; polarization::SphericalUnitVector=Unpolarized())
+    transition_strengths(spectrum::Spectrum, g::State, frequency_range; polarization::SphericalUnitVector=Unpolarized())
 
 Compute electric dipole transitions out of `g` with energy between `frequency_range[1]` and `frequency_range[2]`.
 
@@ -154,7 +154,7 @@ function transition_strengths(
 end
 
 """
-    plot_transition_strengths(spectrum, g, frequency_range; polarization::SphericalUnitVector=Unpolarized())
+    plot_transition_strengths(spectrum::Spectrum, g::State, frequency_range; polarization::SphericalUnitVector=Unpolarized())
 
 Plot the frequencies and strengths of electric dipole transitions out of `g`,
 with energy between `frequency_range[1]` and `frequency_range[2]`.
