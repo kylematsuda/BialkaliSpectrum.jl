@@ -1,9 +1,24 @@
+"""
+    SphericalVector(magnitude, θ, φ)
+
+Construct a vector with `magnitude`, polar angle `θ`, and azimuthal angle `φ`.
+
+Represents an external field vector in spherical coordinates used
+to construct [`ExternalFields`](@ref). Currently, `SphericalVector`s
+may be negated but no other mathematical operations are implemented.
+
+Vectors along ``x``, ``y``, or ``z`` can be quickly constructed
+using [`VectorX`](@ref), [`VectorY`](@ref), and [`VectorZ`](@ref),
+respectively.
+
+See also [`SphericalUnitVector`](@ref), [`ExternalFields`](@ref).
+"""
 struct SphericalVector
-    "Magnitude"
+    "Magnitude\n"
     magnitude::Float64
-    "Polar angle (rad)"
+    "Polar angle (rad)\n"
     θ::Float64
-    "Azimuthal angle (rad)"
+    "Azimuthal angle (rad)\n"
     φ::Float64
 
     function SphericalVector(magnitude, θ, φ)
@@ -29,14 +44,66 @@ function Base.:-(sv::SphericalVector)
     end
 end
 
+"""
+    VectorX(magnitude)
+
+Construct a [`SphericalVector`](@ref) with `magnitude` along `x`.
+
+# Examples
+```jldoctest
+julia> VectorX(5.0)
+SphericalVector(5.0, 1.5707963267948966, 0.0)
+```
+"""
 VectorX(magnitude) = SphericalVector(magnitude, π / 2, 0)
+
+"""
+    VectorY(magnitude)
+
+Construct a [`SphericalVector`](@ref) with `magnitude` along `y`.
+
+# Examples
+```jldoctest
+julia> VectorY(2.0)
+SphericalVector(2.0, 1.5707963267948966, 1.5707963267948966)
+```
+"""
 VectorY(magnitude) = SphericalVector(magnitude, π / 2, π / 2)
+
+"""
+    VectorZ(magnitude)
+
+Construct a [`SphericalVector`](@ref) with `magnitude` along `z`.
+
+# Examples
+```jldoctest
+julia> VectorZ(10.0)
+SphericalVector(10.0, 0.0, 0.0)
+```
+"""
 VectorZ(magnitude) = SphericalVector(magnitude, 0, 0)
 
+"""
+    SphericalUnitVector(magnitude, θ, φ)
+    SphericalUnitVector(v::SphericalVector)
+
+Construct a unit vector with polar angle `θ`, and azimuthal angle `φ`.
+
+Represents the direction of an external field vector in spherical coordinates.
+Currently, `SphericalUnitVector`s may be negated but no other
+mathematical operations are implemented.
+
+Vectors along ``x``, ``y``, or ``z`` can be quickly constructed
+using [`UnitVectorX`](@ref), [`UnitVectorY`](@ref), and [`UnitVectorZ`](@ref),
+respectively.
+
+See also [`SphericalVector`](@ref), [`transition_strengths`](@ref),
+[`T⁽¹⁾`](@ref), [`T⁽²⁾`](@ref).
+"""
 struct SphericalUnitVector
-    "Polar angle (rad)"
+    "Polar angle (rad)\n"
     θ::Float64
-    "Azimuthal angle (rad)"
+    "Azimuthal angle (rad)\n"
     φ::Float64
 
     function SphericalUnitVector(θ, φ)
@@ -56,11 +123,91 @@ end
 
 Base.:-(uv::SphericalUnitVector) = SphericalUnitVector(π - uv.θ, uv.φ + π)
 
+"""
+    UnitVectorX()
+
+Construct a [`SphericalUnitVector`](@ref) along `x`.
+
+# Examples
+```jldoctest
+julia> UnitVectorX()
+SphericalUnitVector(1.5707963267948966, 0.0)
+```
+"""
 UnitVectorX() = SphericalUnitVector(π / 2, 0)
+
+"""
+    UnitVectorY()
+
+Construct a [`SphericalUnitVector`](@ref) along `y`.
+
+# Examples
+```jldoctest
+julia> UnitVectorY()
+SphericalUnitVector(1.5707963267948966, 1.5707963267948966)
+```
+"""
 UnitVectorY() = SphericalUnitVector(π / 2, π / 2)
+
+"""
+    UnitVectorZ()
+
+Construct a [`SphericalUnitVector`](@ref) along `z`.
+
+# Examples
+```jldoctest
+julia> UnitVectorZ()
+SphericalUnitVector(0.0, 0.0)
+```
+"""
 UnitVectorZ() = SphericalUnitVector(0, 0)
+
+"""
+    Unpolarized()
+
+Construct a [`SphericalUnitVector`](@ref) with equal
+projection along `x`, `y`, and `z`.
+
+See also [`transition_strengths`](@ref), [`plot_transition_strengths`](@ref).
+
+# Examples
+```jldoctest
+julia> Unpolarized()
+SphericalUnitVector(0.9553166181245092, 0.7853981633974483)
+```
+"""
 Unpolarized() = SphericalUnitVector(acos(1 / sqrt(3)), π / 4)
 
+"""
+    T⁽¹⁾(v)
+
+Construct the components of the rank 1 spherical tensor ``T⁽¹⁾(v)``.
+
+# Examples
+```jldoctest
+julia> T⁽¹⁾(UnitVectorX())
+3-element StaticArrays.SVector{3, ComplexF64} with indices SOneTo(3):
+    0.7071067811865475 - 0.0im
+ 6.123233995736766e-17 + 0.0im
+   -0.7071067811865475 - 0.0im
+```
+
+```jldoctest
+julia> T⁽¹⁾(UnitVectorY())
+3-element StaticArrays.SVector{3, ComplexF64} with indices SOneTo(3):
+  4.329780281177466e-17 - 0.7071067811865475im
+  6.123233995736766e-17 + 0.0im
+ -4.329780281177466e-17 - 0.7071067811865475im
+```
+
+```jldoctest
+julia> T⁽¹⁾(UnitVectorZ())
+3-element StaticArrays.SVector{3, ComplexF64} with indices SOneTo(3):
+  0.0 - 0.0im
+  1.0 + 0.0im
+ -0.0 - 0.0im
+```
+"""
 function T⁽¹⁾(v::SphericalUnitVector)::SVector{3,ComplexF64}
     θ = v.θ
     φ = v.φ
@@ -75,6 +222,42 @@ function T⁽¹⁾(v::SphericalUnitVector)::SVector{3,ComplexF64}
     return SVector(-conj(T11), T10, T11)
 end
 
+"""
+    T⁽²⁾(v)
+
+Construct the components of the rank 2 spherical tensor ``T⁽²⁾(v, v)``.
+
+# Examples
+```jldoctest
+julia> T⁽²⁾(UnitVectorX())
+5-element StaticArrays.SVector{5, ComplexF64} with indices SOneTo(5):
+                    0.5 - 0.0im
+  6.123233995736766e-17 - 0.0im
+    -0.4082482904638631 + 0.0im
+ -6.123233995736766e-17 - 0.0im
+                    0.5 + 0.0im
+```
+
+```jldoctest
+julia> T⁽²⁾(UnitVectorY())
+5-element StaticArrays.SVector{5, ComplexF64} with indices SOneTo(5):
+                   -0.5 - 6.123233995736766e-17im
+  3.749399456654644e-33 - 6.123233995736766e-17im
+    -0.4082482904638631 + 0.0im
+ -3.749399456654644e-33 - 6.123233995736766e-17im
+                   -0.5 + 6.123233995736766e-17im
+```
+
+```jldoctest
+julia> T⁽²⁾(UnitVectorZ())
+5-element StaticArrays.SVector{5, ComplexF64} with indices SOneTo(5):
+                0.0 - 0.0im
+                0.0 - 0.0im
+ 0.8164965809277261 + 0.0im
+               -0.0 - 0.0im
+                0.0 + 0.0im
+```
+"""
 function T⁽²⁾(v::SphericalUnitVector)::SVector{5,ComplexF64}
     θ = v.θ
     φ = v.φ
@@ -95,6 +278,11 @@ function get_tensor_component(p::Int, tensor::Vector{ComplexF64})
     return tensor[1+(p+rank)]
 end
 
+"""
+    tensor_dot(a, b)
+
+Contract two spherical tensors `a` and `b`.
+"""
 function tensor_dot(a, b)
     @assert size(a, 1) == size(b, 1)
     @assert isodd(size(a, 1))
@@ -102,18 +290,46 @@ function tensor_dot(a, b)
     mapreduce(p -> conj(a[p]) .* b[p], +, eachindex(a))
 end
 
+"""
+    ExternalFields(B::SphericalVector, E::SphericalVector, Optical::Vector{SphericalVector})
+    ExternalFields(B::Float64, E::Float64)
+
+External magnetic, electric, optical fields to use in constructing the Hamiltonian.
+
+If `B` and `E` are provided as `Float64`s, then the fields are assumed to be along `z`.
+The `Optical` argument can also be left as an empty vector `[]`.
+
+See also [`calculate_spectrum`](@ref), [`hamiltonian`](@ref), [`SphericalVector`](@ref).
+
+# Examples
+```jldoctest
+julia> ExternalFields(VectorZ(545.9), VectorX(1020.0), [])
+ExternalFields(SphericalVector(545.9, 0.0, 0.0), SphericalVector(1020.0, 1.5707963267948966, 0.0), SphericalVector[])
+```
+
+```jldoctest
+julia> ExternalFields(545.9, 1020.0)
+ExternalFields(SphericalVector(545.9, 0.0, 0.0), SphericalVector(1020.0, 0.0, 0.0), SphericalVector[])
+```
+
+```jldoctest
+julia> ExternalFields(VectorZ(545.9), VectorX(1020.0), [VectorY(2300.), SphericalVector(2300., π/2, π/4)])
+[...]
+```
+"""
 struct ExternalFields
-    "Magnetic field (G)"
+    "Magnetic field (G)\n"
     B::SphericalVector
-    "Electric field (V/cm)"
+    "Electric field (V/cm)\n"
     E::SphericalVector
-    "Laser fields (W/cm^2)"
+    "Laser fields (W/cm^2)\n"
     Optical::Vector{SphericalVector}
 
     ExternalFields(B::SphericalVector, E::SphericalVector, Optical) = new(B, E, Optical)
 end
 
 ExternalFields(B::Float64, E::Float64) = ExternalFields(VectorZ(B), VectorZ(E), [])
+
 const DEFAULT_FIELDS = ExternalFields(545.9, 0.0)
 const TEST_FIELDS = ExternalFields(
     SphericalVector(545.9, π / 4, π / 4),

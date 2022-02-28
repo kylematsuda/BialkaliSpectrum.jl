@@ -8,11 +8,17 @@ WignerJ2J(j, m) =
     (-1)^(j - m) * 2 * (3m^2 - j * (j + 1)) /
     sqrt((2j - 1) * (2j) * (2j + 1) * (2j + 2) * (2j + 3))
 
-# Note: Need to enforce Kronecker deltas at the end!!!
-# This is not checked inside of this function, because this tensor could be dotted with another operator,
-# e.g., N ⋅ Iₖ, which allows mᵢ to change.
-#
-# Any Kronecker deltas need to be enforced at the scope where the dot product is taken.
+"""
+    T⁽¹⁾N(p, bra, ket)
+
+Compute the matrix elements of the `p`th component of the spherical tensor operator ``T⁽¹⁾(N)``.
+
+Note: in this function, Kronecker deltas are only enforced between the rotational quantum numbers.
+The nuclear quantum numbers are not required to match, because this tensor could be dotted with another operator,
+e.g., N ⋅ Iₖ, which allows mᵢ to change.
+
+Any Kronecker deltas on the nuclear quantum numbers must be enforced where the dot product is eventually taken.
+"""
 function T⁽¹⁾N(p::Int, bra::State, ket::State)::ComplexF64
     N, mₙ = bra.N, bra.mₙ
     N′, mₙ′ = ket.N, ket.mₙ
@@ -24,11 +30,18 @@ function T⁽¹⁾N(p::Int, bra::State, ket::State)::ComplexF64
     end
 end
 
-# Note: Need to enforce Kronecker deltas at the end!!!
-# This is not checked inside of this function, because this tensor could be dotted with another operator,
-# e.g., N ⋅ Iₖ, which allows mₙ to change.
-#
-# Any Kronecker deltas need to be enforced at the scope where the dot product is taken.
+"""
+    T⁽¹⁾Iₖ(p, k, bra, ket)
+
+Compute the matrix elements of the `p`th component of the spherical tensor operator ``T⁽¹⁾(Iₖ)``,
+which acts on the `k`th nucleus.
+
+Note: in this function, Kronecker deltas are only enforced between the quantum numbers of the `k`th nucleus.
+The other quantum numbers are not required to match, because this tensor could be dotted with another operator,
+e.g., N ⋅ Iₖ, which allows mₙ to change.
+
+Any Kronecker deltas on the remaining quantum numbers must be enforced where the dot product is eventually taken.
+"""
 function T⁽¹⁾Iₖ(p::Int, k::Int, bra::State, ket::State)::ComplexF64
     I, mᵢ = bra.I[k], bra.mᵢ[k]
     I′, mᵢ′ = ket.I[k], ket.mᵢ[k]

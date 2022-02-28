@@ -168,30 +168,32 @@ end
     fields = ExternalFields(0.0, 0.0) # no fields
     spectrum = calculate_spectrum(parts, fields)
 
+    frequency_range = [2B - 1, 2B + 1]
+
     g = State(0, 0, 1, 0, 1, 0)
     e10 = State(1, 0, 1, 0, 1, 0)
     e1m1 = State(1, -1, 1, 0, 1, 0)
     e1p1 = State(1, 1, 1, 0, 1, 0)
 
     π_transitions =
-        transition_strengths(spectrum, g, 2B - 1, 2B + 1; polarization = UnitVectorZ())
+        transition_strengths(spectrum, g, frequency_range; polarization = UnitVectorZ())
     @test all(π_transitions[1][1:2] .≈ (2 * B, 1.0))
     @test π_transitions[1][3] == e10
 
     x_transitions =
-        transition_strengths(spectrum, g, 2B - 1, 2B + 1; polarization = UnitVectorX())
+        transition_strengths(spectrum, g, frequency_range; polarization = UnitVectorX())
     @test all(x_transitions[1][1:2] .≈ (2 * B, 1 / sqrt(2)))
     @test all(x_transitions[2][1:2] .≈ (2 * B, 1 / sqrt(2)))
     @test (x_transitions[1][3] == e1p1 && x_transitions[2][3] == e1m1) ||
           (x_transitions[1][3] == e1m1 && x_transitions[2][3] == e1p1)
 
     y_transitions =
-        transition_strengths(spectrum, g, 2B - 1, 2B + 1; polarization = UnitVectorY())
+        transition_strengths(spectrum, g, frequency_range; polarization = UnitVectorY())
     @test all(y_transitions[1][1:2] .≈ (2 * B, 1 / sqrt(2)))
     @test all(y_transitions[2][1:2] .≈ (2 * B, 1 / sqrt(2)))
     @test (y_transitions[1][3] == e1p1 && y_transitions[2][3] == e1m1) ||
           (y_transitions[1][3] == e1m1 && y_transitions[2][3] == e1p1)
 
-    unpol = transition_strengths(spectrum, g, 2B - 1, 2B + 1)
+    unpol = transition_strengths(spectrum, g, frequency_range)
     @test all(map(k -> ≈(k[2], 1 / sqrt(3)), unpol[1:3]))
 end

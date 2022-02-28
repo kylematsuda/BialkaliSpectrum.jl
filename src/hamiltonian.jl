@@ -1,8 +1,19 @@
+"""
+    h_diagonal(basis, matrix_element)
+
+Create a diagonal matrix where the `(i, i)`th element is `matrix_element(basis[i], basis[i])`.
+"""
 function h_diagonal(basis::Vector{State}, matrix_element::Function)
     return Hermitian(Diagonal(map(x -> matrix_element(x, x), basis)))
 end
 
-# matrix_element should have signature (State, State) -> ComplexF64
+"""
+    h_rank_0(basis, matrix_element)
+
+Create a matrix where the `(i, j)`th element is `matrix_element(basis[j], basis[i])`.
+
+Note that `matrix_element` must have the signature (State, State) -> ComplexF64.
+"""
 function h_rank_0(basis::Vector{State}, matrix_element::Function)
     elts::Int = length(basis)
     H = spzeros(ComplexF64, elts, elts)
@@ -16,8 +27,14 @@ function h_rank_0(basis::Vector{State}, matrix_element::Function)
     return Hermitian(H)
 end
 
-# matrix_element should have signature (Int, State, State) -> ComplexF64
-# first argument is tensor component p
+"""
+    h_tensor_component(basis, matrix_element, p)
+
+Create a matrix where the `(i, j)`th element is `matrix_element(p, basis[j], basis[i])`.
+
+Note that `matrix_element` must have the signature (Int, State, State) -> ComplexF64.
+The first argument is the tensor component `p`.
+"""
 function h_tensor_component(basis::Vector{State}, matrix_element::Function, p::Int)
     elts::Int = length(basis)
     H = spzeros(ComplexF64, elts, elts)
@@ -31,10 +48,26 @@ function h_tensor_component(basis::Vector{State}, matrix_element::Function, p::I
     return Hermitian(H)
 end
 
+"""
+    h_rank_1(basis, matrix_element)
+
+Create a vector of 3 matrices to contract against a rank 1 spherical tensor.
+
+Note that `matrix_element` must have the signature (Int, State, State) -> ComplexF64.
+The first argument is the tensor component `p` in `-1:1`.
+"""
 function h_rank_1(basis::Vector{State}, matrix_element::Function)
     return [h_tensor_component(basis, matrix_element, p) for p = -1:1]
 end
 
+"""
+    h_rank_2(basis, matrix_element)
+
+Create a vector of 5 matrices to contract against a rank 2 spherical tensor.
+
+Note that `matrix_element` must have the signature (Int, State, State) -> ComplexF64.
+The first argument is the tensor component `p` in `-2:2`.
+"""
 function h_rank_2(basis::Vector{State}, matrix_element::Function)
     return [h_tensor_component(basis, matrix_element, p) for p = -2:2]
 end
@@ -91,6 +124,21 @@ function make_ac(molecular_parameters::MolecularParameters, basis::Vector{State}
     return (ac_scalar, ac_tensor)
 end
 
+"""
+    HamiltonianParts
+
+Contains all parts of the Hamiltonian except external fields.
+
+Zeeman, dc Stark, and ac Stark terms are stored as vectors of matrices
+that can be contracted with the appropriate external field tensors.
+This allows the full Hamiltonian to be re-constructed at various
+field values and orientations without recalculating all of the matrix elements.
+
+Should be created by [`make_hamiltonian_parts`](@ref) or [`make_krb_hamiltonian_parts`](@ref).
+Used as an input to [`calculate_spectrum`](@ref) and [`hamiltonian`](@ref).
+
+See also [`make_hamiltonian_parts`](@ref), [`make_krb_hamiltonian_parts`](@ref).
+"""
 struct HamiltonianParts
     basis::Any
     rotation::Any
@@ -102,6 +150,17 @@ struct HamiltonianParts
     ac_tensor::SVector{5}
 end
 
+"""
+    make_hamiltonian_parts(molecular_parameters, N_max)
+
+Construct all parts of the Hamiltonian that do not depend on external fields.
+
+The size of the basis is determined by `molecular_parameters`, which contains the
+nuclear spin quantum numbers `molecular_parameters.I`, and the rotational states
+`0:N_max` to include.
+
+See also [`make_krb_hamiltonian_parts`](@ref).
+"""
 function make_hamiltonian_parts(
     molecular_parameters::MolecularParameters,
     N_max::Int,
@@ -127,6 +186,32 @@ function make_hamiltonian_parts(
     )
 end
 
+"""
+    make_krb_hamiltonian_parts(N_max)
+
+Construct all parts of the ``{}^{40}\\text{K}^{87}\\text{Rb}`` Hamiltonian
+that do not depend on external fields.
+
+The rotational states `0:N_max` are included. This is a shortcut method that
+replaces `make_hamiltonian_parts` for KRb.
+
+See also [`make_hamiltonian_parts`](@ref).
+"""
+function make_krb_hamiltonian_parts(N_max::Int)
+    return make_hamiltonian_parts(KRb_Parameters_Neyenhuis, N_max)
+end
+
+"""
+    hamiltonian(parts, external_fields)
+
+Construct the full Hamiltonian including magnetic, electric, and optical fields.
+
+The field-independent building blocks in `parts` can be reused over calls
+to `hamiltonian` to avoid recalculating the matrix elements each time.
+
+See also [`make_hamiltonian_parts`](@ref), [`make_krb_hamiltonian_parts`](@ref),
+[`ExternalFields`](@ref).
+"""
 function hamiltonian(parts::HamiltonianParts, external_fields::ExternalFields)
     h = parts.rotation + parts.hyperfine
 

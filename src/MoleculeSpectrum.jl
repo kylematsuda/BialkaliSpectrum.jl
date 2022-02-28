@@ -11,27 +11,37 @@ export KRb_Parameters_Neyenhuis,
     KRb_Parameters_Ospelkaus, DEFAULT_MOLECULAR_PARAMETERS, TOY_MOLECULE_PARAMETERS
 
 export SphericalVector, VectorX, VectorY, VectorZ
-export SphericalUnitVector, UnitVectorX, UnitVectorY, UnitVectorZ
+export SphericalUnitVector, UnitVectorX, UnitVectorY, UnitVectorZ, Unpolarized
 export T⁽¹⁾, T⁽²⁾, get_tensor_component, tensor_dot
 export ExternalFields, DEFAULT_FIELDS, TEST_FIELDS
 
 export State, KRbState, index_to_state, state_to_index
-export order_by_overlap_with, max_overlap_with, get_energy, get_energy_difference
+export order_by_overlap_with, max_overlap_with, find_closest_basis_state
+export get_energy, get_energy_difference
 
 export HamiltonianParts, make_hamiltonian_parts, hamiltonian, make_krb_hamiltonian_parts
 
 export Spectrum, calculate_spectrum, transition_strengths, plot_transition_strengths
 
 module Constants
-const μN = 7.622593285e-4 # MHz/G
+"Nuclear magneton in MHz/G\n"
+const μN = 7.622593285e-4
+"Factor to convert from Debye to C m\n"
 const DToSI = 3.33564e-30
+"Planck's constant (SI)\n"
 const h = 6.62607004e-34
+"Convert from D*(V/cm) to MHz\n"
 const DVcm⁻¹ToMHz = (DToSI / h) * 1e-4
 end # module
 
 include("molecular_parameters.jl")
 include("fields.jl")
 
+"""
+    State
+
+Represents a molecular state in the uncoupled basis.
+"""
 struct State
     N::Int
     mₙ::Int
@@ -39,10 +49,25 @@ struct State
     mᵢ::SVector{2,HalfInt}
 end
 
-State(N, mₙ, I₁, mᵢ₁, I₂, mᵢ₂) = State(N, mₙ, SVector(I₁, I₂), SVector(mᵢ₁, mᵢ₂))
+"""
+    State(N, mₙ, I₁, mᵢ₁, I₂, mᵢ₂)
 
-KRbState(N, mₙ, mᵢ₁::Number, mᵢ₂::Number) =
-    State(N, mₙ, KRb_Parameters_Neyenhuis.I, [HalfInt(mᵢ₁) HalfInt(mᵢ₂)])
+Creates a basis state ``|N, mₙ, I₁, mᵢ₁, I₂, mᵢ₂⟩``.
+
+"""
+State(N, mₙ, I₁, mᵢ₁, I₂, mᵢ₂) = State(N, mₙ, SVector(HalfInt(I₁), HalfInt(I₂)), SVector(HalfInt(mᵢ₁), HalfInt(mᵢ₂)))
+
+"""
+    KRbState(N, mₙ, mK, mRb)
+
+Creates a basis state ``|N, m_n, m_{\\text{K}}, m_{\\text{Rb}}⟩`` for ``{}^{40}\\text{K}^{87}\\text{Rb}``.
+
+This is a wrapper around [`State`](@ref) to avoid having to specify the nuclear spins ``I_k`` each time.
+
+See also [`State`](@ref).
+"""
+KRbState(N, mₙ, mK, mRb) =
+    State(N, mₙ, KRb_Parameters_Neyenhuis.I, [HalfInt(mK) HalfInt(mRb)])
 
 struct Spectrum
     hamiltonian_parts::Any
@@ -54,10 +79,18 @@ include("utility.jl")
 include("matrix_elements.jl")
 include("hamiltonian.jl")
 
-function make_krb_hamiltonian_parts(N_max::Int)
-    return make_hamiltonian_parts(KRb_Parameters_Neyenhuis, N_max)
-end
+"""
+    calculate_spectrum(hamiltonian_parts, external_fields)
 
+Compute the energies and eigenstates under the external fields.
+
+To avoid reconstructing the Hamiltonian each time, `hamiltonian_parts` can be reused over calls
+to `calculate_spectrum`. The output [`Spectrum`](@ref) object is used as an input for
+further analysis, for example in [`transition_strengths`](@ref).
+
+See also [`make_hamiltonian_parts`](@ref), [`make_krb_hamiltonian_parts`](@ref),
+[`Spectrum`](@ref).
+"""
 function calculate_spectrum(
     hamiltonian_parts::HamiltonianParts,
     external_fields::ExternalFields,
@@ -68,11 +101,30 @@ function calculate_spectrum(
     return Spectrum(hamiltonian_parts, energies, eigenstates)
 end
 
+"""
+    transition_strengths(spectrum, g, frequency_range; polarization::SphericalUnitVector=Unpolarized())
+
+Compute electric dipole transitions out of `g` with energy between `frequency_range[1]` and `frequency_range[2]`.
+
+The output is a `Vector` of tuples `(frequency, strength, closest_basis_state)`, produced in
+decreasing order of transition strength. The `strength` is the absolute value of the dipole matrix element,
+normalized by ``D/\\sqrt{3}`` (the maximum transition dipole between ``N = 0`` and ``N = 1``). We use
+the absolute value of the matrix element, rather than its square, so the results are proportional to
+Rabi frequency ``Ω``.
+
+The `polarization` keyword argument can be used to choose a specific microwave polarization. This defaults to
+[`Unpolarized()`](@ref), and expects a [`SphericalUnitVector`](@ref).
+
+There is a convenience method [`plot_transition_strengths`](@ref) that calls `transition_strengths` internally
+and immediately produces a plot.
+
+See also [`plot_transition_strengths`](@ref), [`make_hamiltonian_parts`](@ref), [`make_krb_hamiltonian_parts`](@ref),
+[`Spectrum`](@ref).
+"""
 function transition_strengths(
     spectrum::Spectrum,
     g::State,
-    f_low,
-    f_high;
+    frequency_range;
     polarization::SphericalUnitVector = Unpolarized(),
 )
     eigenstates = spectrum.eigenstates
@@ -86,7 +138,7 @@ function transition_strengths(
     g_state = eigenstates[:, index_g]
 
     state_range =
-        searchsortedfirst(energies, f_low + E_g):searchsortedlast(energies, f_high + E_g)
+        searchsortedfirst(energies, frequency_range[1] + E_g):searchsortedlast(energies, frequency_range[2] + E_g)
     states = [eigenstates[:, k] for k in state_range]
     frequencies = [energies[k] - E_g for k in state_range]
 
@@ -101,15 +153,28 @@ function transition_strengths(
     return sort!(out, by = t -> t[2], rev = true)
 end
 
+"""
+    plot_transition_strengths(spectrum, g, frequency_range; polarization::SphericalUnitVector=Unpolarized())
+
+Plot the frequencies and strengths of electric dipole transitions out of `g`,
+with energy between `frequency_range[1]` and `frequency_range[2]`.
+
+The `polarization` keyword argument can be used to choose a specific microwave polarization. This defaults to
+[`Unpolarized()`](@ref), and expects a [`SphericalUnitVector`](@ref).
+
+This method calls [`transition_strengths`](@ref) internally.
+
+See also [`transition_strengths`](@ref), [`make_hamiltonian_parts`](@ref), [`make_krb_hamiltonian_parts`](@ref),
+[`Spectrum`](@ref).
+"""
 function plot_transition_strengths(
     spectrum::Spectrum,
     g::State,
-    f_low,
-    f_high;
+    frequency_range,
     polarization::SphericalUnitVector = Unpolarized(),
 )
     transitions =
-        transition_strengths(spectrum, g, f_low, f_high; polarization = polarization)
+        transition_strengths(spectrum, g, frequency_range; polarization = polarization)
 
     freqs = [t[1] for t in transitions]
     strengths = [t[2] for t in transitions]

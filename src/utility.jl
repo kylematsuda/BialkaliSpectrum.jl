@@ -1,7 +1,28 @@
-n_hyperfine(I::HalfInt) = 2 * I + 1
+n_hyperfine(I) = 2 * I + 1
 n_hyperfine(s::State) = mapreduce(n_hyperfine, *, s.I)
 
-function index_to_state(i::Int, I₁::HalfInt, I₂::HalfInt)::State
+"""
+    index_to_state(i, I₁, I₂)
+
+Returns the `State` corresponding to the `i`th member of the basis.
+
+The uncoupled basis ``|N, mₙ, I₁, mᵢ₁, I₂, mᵢ₂⟩`` is ordered
+with the quantum numbers on the left changing the slowest.
+
+See also [`State`](@ref), [`state_to_index`](@ref).
+
+# Examples
+```jldoctest
+julia> s = index_to_state(1, 4, 3/2)
+State(0, 0, HalfIntegers.Half{Int64}[4, 3/2], HalfIntegers.Half{Int64}[-4, -3/2])
+```
+
+```jldoctest
+julia> s = index_to_state(37, 4, 3/2)
+State(1, -1, HalfIntegers.Half{Int64}[4, 3/2], HalfIntegers.Half{Int64}[-4, -3/2])
+```
+"""
+function index_to_state(i::Int, I₁, I₂)::State
     N_Hyperfine = mapreduce(n_hyperfine, *, [I₁ I₂;])
 
     # Hyperfine part
@@ -16,7 +37,27 @@ function index_to_state(i::Int, I₁::HalfInt, I₂::HalfInt)::State
     return State(N, mₙ, I₁, m_1, I₂, m_2)
 end
 
-# Todo: test for state_to_index(index_to_state(x)) == x
+"""
+    state_to_index(s::State)
+
+Returns index of state `s` in the basis.
+
+The uncoupled basis ``|N, mₙ, I₁, mᵢ₁, I₂, mᵢ₂⟩`` is ordered
+with the quantum numbers on the left changing the slowest.
+
+See also [`State`](@ref), [`index_to_state`](@ref).
+
+# Examples
+```jldoctest
+julia> state_to_index(KRbState(1, 1, -4, 1/2))
+111
+```
+
+```jldoctest
+julia> state_to_index(index_to_state(42, 4, 3/2))
+42
+``` 
+"""
 function state_to_index(s::State)::Int
     rotation = (s.N^2 + 1) + (s.N + s.mₙ)
     hyperfine = (s.I[1] + s.mᵢ[1]) * n_hyperfine(s.I[2]) + (s.I[2] + s.mᵢ[2])
@@ -25,8 +66,16 @@ function state_to_index(s::State)::Int
     return 1 + (rotation - 1) * N_Hyperfine + hyperfine
 end
 
-function order_by_overlap_with(spectrum::Spectrum, s::State)
-    i = state_to_index(s)
+"""
+    order_by_overlap_with(spectrum, target)
+
+Orders the list of eigenstates from `spectrum` by their
+wavefunction overlap with `target`.
+
+See also [`calculate_spectrum`](@ref), [`max_overlap_with`](@ref).
+"""
+function order_by_overlap_with(spectrum::Spectrum, target::State)
+    i = state_to_index(target)
     @assert i < size(spectrum.eigenstates, 1)
     return sortslices(
         spectrum.eigenstates,
@@ -36,28 +85,64 @@ function order_by_overlap_with(spectrum::Spectrum, s::State)
     )
 end
 
-# Returns tuple (overlap, index)
-function max_overlap_with(spectrum::Spectrum, s::State)
-    i = state_to_index(s)
+"""
+    max_overlap_with(spectrum, target)
+
+Find the eigenstate from `spectrum` with the most wavefunction overlap with `target`.
+
+Returns a tuple `(overlap, index)`, where `overlap` is the wavefunction overlap with
+`target` and `index` is the position of the eigenstates in `spectrum`.
+
+See also [`calculate_spectrum`](@ref), [`order_by_overlap_with`](@ref).
+"""
+function max_overlap_with(spectrum::Spectrum, target::State)
+    i = state_to_index(target)
     n_states = size(spectrum.eigenstates, 1)
     @assert i < n_states
 
     findmax(map(x -> abs2(x[i]), eachcol(spectrum.eigenstates)))
 end
 
-function get_energy(spectrum::Spectrum, s::State)
-    return spectrum.energies[max_overlap_with(spectrum, s)[2]]
-end
+"""
+    find_closest_basis_state(spectrum, index)
 
-function get_energy_difference(spectrum::Spectrum, g::State, e::State)
-    return mapreduce(x -> get_energy(spectrum, x), -, [e, g])
-end
+Find the basis state with the most wavefunction overlap with the eigenstate from `spectrum` at `index`.
 
+This method can be thought of as an inverse to [`max_overlap_with`](@ref). 
+
+See also [`calculate_spectrum`](@ref), [`max_overlap_with`](@ref).
+"""
 function find_closest_basis_state(spectrum::Spectrum, index)
     state = spectrum.eigenstates[:, index]
     weights = map(abs2, state)
     index = findmax(weights)[2]
     return spectrum.hamiltonian_parts.basis[index]
+end
+
+"""
+    get_energy(spectrum, target)
+
+Return the energy of the eigenstate with the most wavefunction overlap with `target`.
+
+See also [`calculate_spectrum`](@ref), [`max_overlap_with`](@ref).
+"""
+function get_energy(spectrum::Spectrum, target::State)
+    return spectrum.energies[max_overlap_with(spectrum, target)[2]]
+end
+
+"""
+    get_energy_difference(spectrum, g, e)
+
+Return the difference in energy between the eigenstates from `spectrum`
+that have the most wavefunction overlap with `g` and `e`.
+
+This method is used to calculate transition frequencies; `g` represents the ground
+state, and `e` the excited state.
+
+See also [`calculate_spectrum`](@ref), [`get_energy`](@ref).
+"""
+function get_energy_difference(spectrum::Spectrum, g::State, e::State)
+    return mapreduce(x -> get_energy(spectrum, x), -, [e, g])
 end
 
 function generate_basis(molecular_parameters::MolecularParameters, N_max::Int)
