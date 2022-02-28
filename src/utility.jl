@@ -8,7 +8,7 @@ function index_to_state(i::Int, I₁::HalfInt, I₂::HalfInt)::State
     i_hyperfine = (i - 1) % N_Hyperfine
     m_1 = -I₁ + (i_hyperfine ÷ n_hyperfine(I₂))
     m_2 = -I₂ + (i_hyperfine % n_hyperfine(I₂))
-    
+
     # Rotation part
     i_rotation = (i - 1) ÷ N_Hyperfine
     N::Int = floor(sqrt(i_rotation))
@@ -28,7 +28,12 @@ end
 function order_by_overlap_with(spectrum::Spectrum, s::State)
     i = state_to_index(s)
     @assert i < size(spectrum.eigenstates, 1)
-    return sortslices(spectrum.eigenstates, dims=2, lt=(x,y)->isless(abs2(x[i]), abs2(y[i])), rev=true)
+    return sortslices(
+        spectrum.eigenstates,
+        dims = 2,
+        lt = (x, y) -> isless(abs2(x[i]), abs2(y[i])),
+        rev = true,
+    )
 end
 
 # Returns tuple (overlap, index)
@@ -37,9 +42,7 @@ function max_overlap_with(spectrum::Spectrum, s::State)
     n_states = size(spectrum.eigenstates, 1)
     @assert i < n_states
 
-    findmax(
-        map(x -> abs2(x[i]), eachcol(spectrum.eigenstates))
-    )
+    findmax(map(x -> abs2(x[i]), eachcol(spectrum.eigenstates)))
 end
 
 function get_energy(spectrum::Spectrum, s::State)
@@ -59,5 +62,8 @@ end
 
 function generate_basis(molecular_parameters::MolecularParameters, N_max::Int)
     n_elts::Int = (N_max + 1)^2 * mapreduce(n_hyperfine, *, molecular_parameters.I)
-    return map(k -> index_to_state(k, molecular_parameters.I[1], molecular_parameters.I[2]), 1:n_elts)
+    return map(
+        k -> index_to_state(k, molecular_parameters.I[1], molecular_parameters.I[2]),
+        1:n_elts,
+    )
 end
