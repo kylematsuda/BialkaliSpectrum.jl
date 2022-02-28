@@ -170,7 +170,7 @@ See also [`transition_strengths`](@ref), [`make_hamiltonian_parts`](@ref), [`mak
 function plot_transition_strengths(
     spectrum::Spectrum,
     g::State,
-    frequency_range,
+    frequency_range;
     polarization::SphericalUnitVector = Unpolarized(),
 )
     transitions =
