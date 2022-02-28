@@ -2,6 +2,7 @@ module MoleculeSpectrum
 
 import WignerSymbols: wigner3j
 import HalfIntegers: HalfInt
+import Gadfly
 using LinearAlgebra, SparseArrays, StaticArrays, Test
 
 export ZeemanParameters, NuclearParameters, Polarizability, MolecularParameters
@@ -18,7 +19,7 @@ export order_by_overlap_with, max_overlap_with, get_energy, get_energy_differenc
 
 export HamiltonianParts, make_hamiltonian_parts, hamiltonian, make_krb_hamiltonian_parts
 
-export Spectrum, calculate_spectrum, transition_strengths
+export Spectrum, calculate_spectrum, transition_strengths, plot_transition_strengths
 
 module Constants
     const μN = 7.622593285e-4 # MHz/G
@@ -86,6 +87,22 @@ function transition_strengths(spectrum::Spectrum, g::State, f_low, f_high; polar
     
     out = [x for x in zip(frequencies, strengths, closest_basis_states)]
     return sort!(out, by=t->t[2], rev=true)
+end
+
+function plot_transition_strengths(spectrum::Spectrum, g::State, f_low, f_high; polarization::SphericalUnitVector = Unpolarized())
+    transitions = transition_strengths(spectrum, g, f_low, f_high; polarization=polarization)
+
+    freqs = [t[1] for t in transitions]
+    strengths = [t[2] for t in transitions]
+
+    Gadfly.plot(
+        x=freqs,
+        y=strengths,
+        Gadfly.Geom.hair,
+        Gadfly.Geom.point,
+        Gadfly.Guide.xlabel("Frequency (MHz)"),
+        Gadfly.Guide.ylabel("Transition strength")
+    )
 end
 
 end # module
