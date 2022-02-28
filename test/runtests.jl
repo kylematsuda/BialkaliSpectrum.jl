@@ -129,14 +129,9 @@ end
 
     for fields in [(b_z, (b_x, b_y, b_xz, b_xyz)), (e_z, (e_x, e_y, e_xz, e_xyz))]
         spectrum_z = calculate_spectrum(parts, fields[1])
-        # h_z = hamiltonian(parts, fields[1])
-        # energies = eigvals(h_z)
 
         for f in fields[2]
             spectrum = calculate_spectrum(parts, f)
-            # h = hamiltonian(parts, f)
-            # es = eigvals(h)
-
             @test spectrum.energies ≈ spectrum_z.energies
         end
     end
