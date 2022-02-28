@@ -98,12 +98,8 @@ end
             θ = c[1] * π/180
             optical = SphericalVector(I_light, θ, 0.0)
             fields_with_light = ExternalFields(VectorZ(B), VectorZ(0.0), [optical])
-
             spectrum_light = calculate_spectrum(parts, fields_with_light)
-            # h_light = hamiltonian(parts, fields_with_light)
-            # energies_light = eigvals(h_light)
-            # states_light = eigvecs(h_light)
-
+            
             es_light = map(
                 x -> get_energy(spectrum_light, KRbState(x...)),
                 states_to_check
