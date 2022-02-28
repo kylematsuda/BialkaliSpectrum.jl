@@ -6,14 +6,14 @@ using LinearAlgebra, SparseArrays, StaticArrays, Test
 
 export ZeemanParameters, NuclearParameters, Polarizability, MolecularParameters
 export KRb_Zeeman, KRb_Nuclear_Neyenhuis, KRb_Nuclear_Ospelkaus, KRb_Polarizability
-export KRb_Parameters_Neyenhuis, KRb_Parameters_Ospelkaus, DEFAULT_MOLECULAR_PARAMETERS
+export KRb_Parameters_Neyenhuis, KRb_Parameters_Ospelkaus, DEFAULT_MOLECULAR_PARAMETERS, TOY_MOLECULE_PARAMETERS
 
 export SphericalVector, VectorX, VectorY, VectorZ
 export SphericalUnitVector, UnitVectorX, UnitVectorY, UnitVectorZ
 export T⁽¹⁾, T⁽²⁾, get_tensor_component, tensor_dot
 export ExternalFields, DEFAULT_FIELDS, TEST_FIELDS
 
-export State, index_to_state, state_to_index
+export State, KRbState, index_to_state, state_to_index
 export order_by_overlap_with, max_overlap_with, get_energy, get_energy_difference
 
 export HamiltonianParts, make_hamiltonian_parts, hamiltonian, make_krb_hamiltonian_parts
@@ -38,7 +38,8 @@ struct State
 end
 
 State(N, mₙ, I₁, mᵢ₁, I₂, mᵢ₂) = State(N, mₙ, SVector(I₁, I₂), SVector(mᵢ₁, mᵢ₂))
-State(N, mₙ, mᵢ₁::Number, mᵢ₂::Number) = State(N, mₙ, DEFAULT_MOLECULAR_PARAMETERS.I, [HalfInt(mᵢ₁) HalfInt(mᵢ₂)])
+
+KRbState(N, mₙ, mᵢ₁::Number, mᵢ₂::Number) = State(N, mₙ, KRb_Parameters_Neyenhuis.I, [HalfInt(mᵢ₁) HalfInt(mᵢ₂)])
 
 struct Spectrum
     hamiltonian_parts
@@ -77,7 +78,8 @@ function transition_strengths(spectrum::Spectrum, g::State, f_low, f_high; polar
     frequencies = [energies[k] - E_g for k in state_range]
 
     T1ϵ = T⁽¹⁾(polarization)
-    h_dipole = tensor_dot(T1ϵ, spectrum.hamiltonian_parts.dipole_relative) / sqrt(3)
+    # Normalize to d/sqrt(3), which is the largest transition dipole (between |0,0> and |1,0>)
+    h_dipole = tensor_dot(T1ϵ, spectrum.hamiltonian_parts.dipole_relative) / (1/sqrt(3))
 
     strengths = [abs(g_state' * h_dipole * e) for e in states]
     closest_basis_states = map(e -> find_closest_basis_state(spectrum, e), state_range)

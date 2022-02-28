@@ -3,7 +3,7 @@
 Compute the energy levels of diatomic ${}^{1} \Sigma$ molecules in magnetic, electric, and optical fields.
 
 # Todo
-- [ ] Add transition strengths
+- [x] Add transition strengths
 - [ ] Dump to file
 - [ ] Graphing
 - [x] Improve code organization

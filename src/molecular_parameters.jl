@@ -48,3 +48,12 @@ const KRb_Parameters_Neyenhuis = MolecularParameters(0.574, 1113.9514, [HalfInt(
 const KRb_Parameters_Ospelkaus = MolecularParameters(0.574, 1113.950, [HalfInt(4), HalfInt(3/2)], KRb_Zeeman, KRb_Nuclear_Ospelkaus, KRb_Polarizability)
 
 const DEFAULT_MOLECULAR_PARAMETERS = KRb_Parameters_Neyenhuis
+
+const TOY_MOLECULE_PARAMETERS = MolecularParameters(
+    1.0,
+    1000.,
+    [HalfInt(1), HalfInt(1)], # Some of the matrix elements don't make sense for I = 0
+    ZeemanParameters(0.0, [0.0, 0.0], [0.0, 0.0]),
+    NuclearParameters([0.0, 0.0], [0.0, 0.0], 0.0),
+    Polarizability(0.0, 0.0)
+)

@@ -26,7 +26,7 @@ using MoleculeSpectrum
     ]
 
     for c in comparisons
-        (g, e) = map(i -> State(c[i]...), 1:2)
+        (g, e) = map(i -> KRbState(c[i]...), 1:2)
         transition = get_energy_difference(spectrum, g, e)
         expected = c[3]
 
@@ -53,7 +53,7 @@ end
         ]
 
         for c in comparisons
-            (g, e) = map(i -> State(c[i]...), 1:2)
+            (g, e) = map(i -> KRbState(c[i]...), 1:2)
             transition = get_energy_difference(spectrum, g, e)
             expected = c[3]
 
@@ -92,7 +92,7 @@ end
             (1, 0, -4, 1/2),
         ]
 
-        es = map(x -> get_energy(spectrum, State(x...)), states_to_check)
+        es = map(x -> get_energy(spectrum, KRbState(x...)), states_to_check)
 
         for c in comparisons
             θ = c[1] * π/180
@@ -105,7 +105,7 @@ end
             # states_light = eigvecs(h_light)
 
             es_light = map(
-                x -> get_energy(spectrum_light, State(x...)),
+                x -> get_energy(spectrum_light, KRbState(x...)),
                 states_to_check
             )
 
@@ -180,4 +180,37 @@ end
         s = calculate_spectrum(parts, f)
         @test s.energies ≈ sz.energies
     end
+end
+
+@testset "Transition strengths without hyperfine couplings" begin
+    N_max = 5
+    parts = make_hamiltonian_parts(TOY_MOLECULE_PARAMETERS, N_max)
+    B = TOY_MOLECULE_PARAMETERS.Bᵣ
+
+    fields = ExternalFields(0.0, 0.0) # no fields
+    spectrum = calculate_spectrum(parts, fields)
+
+    g = State(0, 0, 1, 0, 1, 0)
+    e10 = State(1, 0, 1, 0, 1, 0)
+    e1m1 = State(1, -1, 1, 0, 1, 0)
+    e1p1 = State(1, 1, 1, 0, 1, 0)
+
+    π_transitions = transition_strengths(spectrum, g, 2B-1, 2B+1; polarization = UnitVectorZ())    
+    @test all(π_transitions[1][1:2] .≈ (2*B, 1.0))
+    @test π_transitions[1][3] == e10
+
+    x_transitions = transition_strengths(spectrum, g, 2B-1, 2B+1; polarization = UnitVectorX())
+    @test all(x_transitions[1][1:2] .≈ (2*B, 1/sqrt(2)))
+    @test all(x_transitions[2][1:2] .≈ (2*B, 1/sqrt(2)))
+    @test (x_transitions[1][3] == e1p1 && x_transitions[2][3] == e1m1) ||
+        (x_transitions[1][3] == e1m1 && x_transitions[2][3] == e1p1)
+
+    y_transitions = transition_strengths(spectrum, g, 2B-1, 2B+1; polarization = UnitVectorY())
+    @test all(y_transitions[1][1:2] .≈ (2*B, 1/sqrt(2)))
+    @test all(y_transitions[2][1:2] .≈ (2*B, 1/sqrt(2)))
+    @test (y_transitions[1][3] == e1p1 && y_transitions[2][3] == e1m1) ||
+        (y_transitions[1][3] == e1m1 && y_transitions[2][3] == e1p1)
+
+    unpol = transition_strengths(spectrum, g, 2B-1, 2B+1)
+    @test all(map(k -> ≈(k[2], 1/sqrt(3)), unpol[1:3]))
 end
