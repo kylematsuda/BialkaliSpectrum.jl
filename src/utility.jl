@@ -119,6 +119,47 @@ function find_closest_basis_state(spectrum::Spectrum, index)
     return spectrum.hamiltonian_parts.basis[index]
 end
 
+to_indices_and_weights(state) = sort!(
+    collect(Tuple{Int, Float64}, enumerate(map(abs2, state)));
+    by=k->k[2],
+    rev = true
+)
+
+"""
+    decompose_to_basis_states(spectrum::Spectrum, index::Int)
+    decompose_to_basis_states(spectrum::Spectrum, state::Vector{ComplexF64})
+    decompose_to_basis_states(state::Vector{ComplexF64}, I1, I2)
+
+Decompose the given `state` into basis states in order of decreasing weight.
+
+Outputs a `Vector{Tuple{State, Float64}}`, giving a list `[(basis_state, weight)]`. The first variant
+provides the decomposition of the member of `spectrum.eigenstates` at position `index`. The second and third
+variants provide the decomposition of the vector `state`. The third variant does not require `spectrum`
+and recomputes the basis set according to `I1` and `I2`.
+
+See also [`calculate_spectrum`](@ref), [`max_overlap_with`](@ref).
+"""
+function decompose_to_basis_states(spectrum::Spectrum, index::Int)
+    return decompose_to_basis_states(spectrum, spectrum.eigenstates[:, index])
+end
+
+function decompose_to_basis_states(spectrum::Spectrum, state::Vector{ComplexF64})
+    indices_and_weights = to_indices_and_weights(state)
+    return map(
+        ((index, weight),) -> (spectrum.hamiltonian_parts.basis[index], weight),
+        indices_and_weights
+    )
+end
+
+function decompose_to_basis_states(state::Vector{ComplexF64}, I1, I2)
+    indices_and_weights = to_indices_and_weights(state)
+    return map(
+        ((index, weight),) -> (index_to_state(index, I1, I2), weight),
+        indices_and_weights
+    )
+end
+
+
 """
     get_energy(spectrum, target)
 

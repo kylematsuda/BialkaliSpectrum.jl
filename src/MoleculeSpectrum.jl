@@ -16,7 +16,7 @@ export T⁽¹⁾, T⁽²⁾, get_tensor_component, tensor_dot
 export ExternalFields, DEFAULT_FIELDS, TEST_FIELDS
 
 export State, KRbState, index_to_state, state_to_index
-export order_by_overlap_with, max_overlap_with, find_closest_basis_state
+export order_by_overlap_with, max_overlap_with, find_closest_basis_state, decompose_to_basis_states
 export get_energy, get_energy_difference
 
 export HamiltonianParts, make_hamiltonian_parts, hamiltonian, make_krb_hamiltonian_parts
@@ -106,7 +106,7 @@ end
 
 Compute electric dipole transitions out of `g` with energy between `frequency_range[1]` and `frequency_range[2]`.
 
-The output is a `Vector` of tuples `(frequency, strength, closest_basis_state)`, produced in
+The output is a `Vector` of tuples `(frequency, strength, closest_basis_state, eigenstate_index)`, produced in
 decreasing order of transition strength. The `strength` is the absolute value of the dipole matrix element,
 normalized by ``D/\\sqrt{3}`` (the maximum transition dipole between ``N = 0`` and ``N = 1``). We use
 the absolute value of the matrix element, rather than its square, so the results are proportional to
@@ -149,7 +149,7 @@ function transition_strengths(
     strengths = [abs(g_state' * h_dipole * e) for e in states]
     closest_basis_states = map(e -> find_closest_basis_state(spectrum, e), state_range)
 
-    out = [x for x in zip(frequencies, strengths, closest_basis_states)]
+    out = [x for x in zip(frequencies, strengths, closest_basis_states, state_range)]
     return sort!(out, by = t -> t[2], rev = true)
 end
 
