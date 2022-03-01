@@ -163,22 +163,6 @@ SphericalUnitVector(0.0, 0.0)
 UnitVectorZ() = SphericalUnitVector(0, 0)
 
 """
-    Unpolarized()
-
-Construct a [`SphericalUnitVector`](@ref) with equal
-projection along `x`, `y`, and `z`.
-
-See also [`transition_strengths`](@ref), [`plot_transition_strengths`](@ref).
-
-# Examples
-```jldoctest
-julia> Unpolarized()
-SphericalUnitVector(0.9553166181245092, 0.7853981633974483)
-```
-"""
-Unpolarized() = SphericalUnitVector(acos(1 / sqrt(3)), π / 4)
-
-"""
     T⁽¹⁾(v)
 
 Construct the components of the rank 1 spherical tensor ``T⁽¹⁾(v)``.

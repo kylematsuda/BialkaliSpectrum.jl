@@ -21,7 +21,7 @@ export get_energy, get_energy_difference
 
 export HamiltonianParts, make_hamiltonian_parts, hamiltonian, make_krb_hamiltonian_parts
 
-export Spectrum, calculate_spectrum, transition_strengths, plot_transition_strengths
+export Spectrum, calculate_spectrum, find_transition_strengths, plot_transition_strengths
 
 module Constants
 "Nuclear magneton in MHz/G\n"
@@ -102,7 +102,7 @@ function calculate_spectrum(
 end
 
 """
-    transition_strengths(spectrum::Spectrum, g::State, frequency_range; polarization::SphericalUnitVector=Unpolarized())
+    find_transition_strengths(spectrum::Spectrum, g::State, frequency_range; polarization::Union{Int, SphericalUnitVector, Nothing}=nothing)
 
 Compute electric dipole transitions out of `g` with energy between `frequency_range[1]` and `frequency_range[2]`.
 
@@ -112,20 +112,21 @@ normalized by ``D/\\sqrt{3}`` (the maximum transition dipole between ``N = 0`` a
 the absolute value of the matrix element, rather than its square, so the results are proportional to
 Rabi frequency ``Ω``.
 
-The `polarization` keyword argument can be used to choose a specific microwave polarization. This defaults to
-[`Unpolarized()`](@ref), and expects a [`SphericalUnitVector`](@ref).
+The `polarization` keyword argument can be used to choose a specific microwave polarization. This defaults to `nothing`,
+which returns the incoherent sum over ``σ-``, ``π``, and ``σ+``. If `polarization` is an `Int`, then it is interpreted as
+the spherical component `p = -1:1` of the dipole operator (`p == -1` corresponds to ``σ-`` polarization). If
+`polarization` is a `SphericalUnitVector`, then the polarization is interpreted as linear along that axis.
 
-There is a convenience method [`plot_transition_strengths`](@ref) that calls `transition_strengths` internally
-and immediately produces a plot.
+There is a convenience method [`plot_transition_strengths`](@ref) that immediately produces a plot from the result.
 
 See also [`plot_transition_strengths`](@ref), [`make_hamiltonian_parts`](@ref), [`make_krb_hamiltonian_parts`](@ref),
 [`Spectrum`](@ref).
 """
-function transition_strengths(
+function find_transition_strengths(
     spectrum::Spectrum,
     g::State,
     frequency_range;
-    polarization::SphericalUnitVector = Unpolarized(),
+    polarization::Union{Int, SphericalUnitVector, Nothing} = nothing
 )
     eigenstates = spectrum.eigenstates
     energies = spectrum.energies
@@ -133,7 +134,7 @@ function transition_strengths(
     (overlap, index_g) = max_overlap_with(spectrum, g)
     if overlap < 0.5
         @warn "The best overlap with your requested ground state is < 0.5."
-    end
+    end    
     E_g = energies[index_g]
     g_state = eigenstates[:, index_g]
 
@@ -142,39 +143,82 @@ function transition_strengths(
     states = [eigenstates[:, k] for k in state_range]
     frequencies = [energies[k] - E_g for k in state_range]
 
-    T1ϵ = T⁽¹⁾(polarization)
-    # Normalize to d/sqrt(3), which is the largest transition dipole (between |0,0> and |1,0>)
-    h_dipole = tensor_dot(T1ϵ, spectrum.hamiltonian_parts.dipole_relative) / (1 / sqrt(3))
-
-    strengths = [abs(g_state' * h_dipole * e) for e in states]
+    if polarization === nothing
+        strengths = [calculate_transition_strength_incoherent(spectrum, g_state, e) for e in states]
+    else
+        strengths = [calculate_transition_strength_coherent(spectrum, g_state, e, polarization) for e in states]
+    end
     closest_basis_states = map(e -> find_closest_basis_state(spectrum, e), state_range)
 
     out = [x for x in zip(frequencies, strengths, closest_basis_states, state_range)]
     return sort!(out, by = t -> t[2], rev = true)
 end
 
+
 """
-    plot_transition_strengths(spectrum::Spectrum, g::State, frequency_range; polarization::SphericalUnitVector=Unpolarized())
+    calculate_transition_strength_incoherent(spectrum::Spectrum, g::Vector{ComplexF64}, e::Vector{ComplexF64})
+
+Compute the transition strength from `g` to `e` for an even incoherent mixture of polarizations.
+
+The incoherent sum is formed by calculating the squared matrix elements of ``|⟨g|H_p|e⟩|^2`` for each
+spherical component `p = -1:1` of the dipole Hamiltonian, summing the three values, and then taking the square root.
+"""
+function calculate_transition_strength_incoherent(spectrum::Spectrum, g::Vector{ComplexF64}, e::Vector{ComplexF64})
+    h_dipole = spectrum.hamiltonian_parts.dipole_relative
+    intensities = [abs2(g' * h_dipole[p] * e) for p in 1:3]
+
+    # Normalize to d/sqrt(3), which is the largest transition dipole (between |0,0> and |1,0>)
+    strength = sqrt(reduce(+, intensities)) / (1 / sqrt(3))
+    return strength
+end
+
+"""
+    calculate_transition_strength_coherent(spectrum::Spectrum, g::Vector{ComplexF64}, e::Vector{ComplexF64}, polarization::Int)
+    calculate_transition_strength_coherent(spectrum::Spectrum, g::Vector{ComplexF64}, e::Vector{ComplexF64}, polarization::SphericalUnitVector)
+
+Compute the transition strength from `g` to `e`, driven by a field with the given `polarization`.
+
+If `polarization` is an `Int`, then it is interpreted as the spherical component `p = -1:1` of the dipole operator (`p == -1` corresponds to 
+``σ-`` polarization). If `polarization` is a `SphericalUnitVector`, then the polarization is interpreted as linear along that axis.
+
+"""
+function calculate_transition_strength_coherent(spectrum::Spectrum, g::Vector{ComplexF64}, e::Vector{ComplexF64}, polarization::Int)
+    @assert polarization <= 1 && polarization >= -1
+
+    index = polarization + 2 # components are p = -1, 0, 1
+    h_dipole = spectrum.hamiltonian_parts.dipole_relative[index]
+    return abs(g' * h_dipole * e) / (1 / sqrt(3))
+end
+
+function calculate_transition_strength_coherent(spectrum::Spectrum, g::Vector{ComplexF64}, e::Vector{ComplexF64}, polarization::SphericalUnitVector)
+    h_dipole = tensor_dot(T⁽¹⁾(polarization), spectrum.hamiltonian_parts.dipole_relative)
+    return abs(g' * h_dipole * e) / (1 / sqrt(3))
+end
+
+"""
+    plot_transition_strengths(spectrum::Spectrum, g::State, frequency_range; polarization::Union{Int, SphericalUnitVector, Nothing}=nothing)
 
 Plot the frequencies and strengths of electric dipole transitions out of `g`,
 with energy between `frequency_range[1]` and `frequency_range[2]`.
 
-The `polarization` keyword argument can be used to choose a specific microwave polarization. This defaults to
-[`Unpolarized()`](@ref), and expects a [`SphericalUnitVector`](@ref).
+The `polarization` keyword argument can be used to choose a specific microwave polarization. This defaults to `nothing`,
+which returns the incoherent sum over ``σ-``, ``π``, and ``σ+``. If `polarization` is an `Int`, then it is interpreted as
+the spherical component `p = -1:1` of the dipole operator (`p == -1` corresponds to ``σ-`` polarization). If
+`polarization` is a `SphericalUnitVector`, then the polarization is interpreted as linear along that axis.
 
-This method calls [`transition_strengths`](@ref) internally.
+This method calls [`find_transition_strengths`](@ref) internally.
 
-See also [`transition_strengths`](@ref), [`make_hamiltonian_parts`](@ref), [`make_krb_hamiltonian_parts`](@ref),
+See also [`find_transition_strengths`](@ref), [`make_hamiltonian_parts`](@ref), [`make_krb_hamiltonian_parts`](@ref),
 [`Spectrum`](@ref).
 """
 function plot_transition_strengths(
     spectrum::Spectrum,
     g::State,
     frequency_range;
-    polarization::SphericalUnitVector = Unpolarized(),
+    polarization::Union{Int, SphericalUnitVector, Nothing}=nothing
 )
     transitions =
-        transition_strengths(spectrum, g, frequency_range; polarization = polarization)
+        find_transition_strengths(spectrum, g, frequency_range; polarization = polarization)
 
     freqs = [t[1] for t in transitions]
     strengths = [t[2] for t in transitions]
