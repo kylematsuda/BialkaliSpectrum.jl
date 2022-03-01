@@ -4,7 +4,8 @@ Compute the energy levels of diatomic ${}^{1} \Sigma$ molecules in magnetic, ele
 
 # Todo
 - [x] Add transition strengths
-- [ ] Dump to file
+- [ ] Dump to file, and/or dataframes?
 - [ ] Graphing
 - [x] Improve code organization
 - [ ] Documentation
+- [ ] Remove unnecessary types in function signatures (?)
