@@ -16,5 +16,6 @@ Compute the energy levels of diatomic ${}^{1} \Sigma$ molecules in magnetic, ele
     - [ ] More generally... inspect any matrix element?
     - [ ] Make more `calculate` functions polymorphic over `State`, eigenstate index, etc
     - [ ] ...
-- [ ] Switch to `get_eigenstates` function
-- [ ] Explicitly type fields of all structs
+- [x] Switch to `get_eigenstates` function
+- [x] Explicitly type fields of all structs
+- [ ] Many more tests!!!

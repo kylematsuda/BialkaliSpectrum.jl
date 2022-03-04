@@ -77,10 +77,12 @@ include("hamiltonian.jl")
 struct Spectrum
     hamiltonian_parts::HamiltonianParts
     energies::Vector{Float64}
-    eigenstates::Any
+    eigenstates::Vector{Vector{ComplexF64}}
 end
 
-get_eigenstate(spectrum, k) = spectrum.eigenstates[:, k]
+get_eigenstate(spectrum, k) = spectrum.eigenstates[k]
+get_energies(spectrum) = spectrum.energies
+get_energies(spectrum, range) = filter(x -> (x >= range[1] && x <= range[2]), spectrum.energies)
 
 include("utility.jl")
 
@@ -102,7 +104,7 @@ function calculate_spectrum(
 )::Spectrum
     h = hamiltonian(hamiltonian_parts, external_fields)
     energies = eigvals(h)
-    eigenstates = eigvecs(h)
+    eigenstates = [c for c in eachcol(eigvecs(h))]
     return Spectrum(hamiltonian_parts, energies, eigenstates)
 end
 
@@ -133,19 +135,18 @@ function find_transition_strengths(
     frequency_range;
     polarization::Union{Int, SphericalUnitVector, Nothing} = nothing
 )
-    eigenstates = spectrum.eigenstates
-    energies = spectrum.energies
+    energies = get_energies(spectrum)
 
     (overlap, index_g) = max_overlap_with(spectrum, g)
     if overlap < 0.5
         @warn "The best overlap with your requested ground state is < 0.5."
     end    
     E_g = energies[index_g]
-    g_state = eigenstates[:, index_g]
+    g_state = get_eigenstate(spectrum, index_g)
 
     state_range =
         searchsortedfirst(energies, frequency_range[1] + E_g):searchsortedlast(energies, frequency_range[2] + E_g)
-    states = [eigenstates[:, k] for k in state_range]
+    states = [get_eigenstate(spectrum, k) for k in state_range]
     frequencies = [energies[k] - E_g for k in state_range]
 
     if polarization === nothing

@@ -77,9 +77,8 @@ See also [`calculate_spectrum`](@ref), [`max_overlap_with`](@ref).
 function order_by_overlap_with(spectrum::Spectrum, target::State)
     i = state_to_index(target)
     @assert i < size(spectrum.eigenstates, 1)
-    return sortslices(
+    return sort(
         spectrum.eigenstates,
-        dims = 2,
         lt = (x, y) -> isless(abs2(x[i]), abs2(y[i])),
         rev = true,
     )
@@ -100,7 +99,7 @@ function max_overlap_with(spectrum::Spectrum, target::State)
     n_states = size(spectrum.eigenstates, 1)
     @assert i < n_states
 
-    findmax(map(x -> abs2(x[i]), eachcol(spectrum.eigenstates)))
+    findmax(map(x -> abs2(x[i]), spectrum.eigenstates))
 end
 
 """
@@ -113,7 +112,7 @@ This method can be thought of as an inverse to [`max_overlap_with`](@ref).
 See also [`calculate_spectrum`](@ref), [`max_overlap_with`](@ref).
 """
 function find_closest_basis_state(spectrum::Spectrum, index)
-    state = spectrum.eigenstates[:, index]
+    state = get_eigenstate(spectrum, index)
     weights = map(abs2, state)
     index = findmax(weights)[2]
     return spectrum.hamiltonian_parts.basis[index]
@@ -140,7 +139,7 @@ and recomputes the basis set according to `I1` and `I2`.
 See also [`calculate_spectrum`](@ref), [`max_overlap_with`](@ref).
 """
 function decompose_to_basis_states(spectrum::Spectrum, index::Int)
-    return decompose_to_basis_states(spectrum, spectrum.eigenstates[:, index])
+    return decompose_to_basis_states(spectrum, get_eigenstate(spectrum, index))
 end
 
 function decompose_to_basis_states(spectrum::Spectrum, state::Vector{ComplexF64})
@@ -168,7 +167,7 @@ Return the energy of the eigenstate with the most wavefunction overlap with `tar
 See also [`calculate_spectrum`](@ref), [`max_overlap_with`](@ref).
 """
 function get_energy(spectrum::Spectrum, target::State)
-    return spectrum.energies[max_overlap_with(spectrum, target)[2]]
+    return get_energies(spectrum)[max_overlap_with(spectrum, target)[2]]
 end
 
 """
