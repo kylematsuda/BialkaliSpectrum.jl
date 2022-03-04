@@ -169,7 +169,7 @@ spherical component `p = -1:1` of the dipole Hamiltonian, summing the three valu
 """
 function calculate_transition_strength_incoherent(spectrum::Spectrum, g::Vector{ComplexF64}, e::Vector{ComplexF64})
     h_dipole = spectrum.hamiltonian_parts.dipole_relative
-    intensities = [abs2(g' * h_dipole[p] * e) for p in 1:3]
+    intensities = [abs2(e' * h_dipole[p] * g) for p in 1:3]
 
     # Normalize to d/sqrt(3), which is the largest transition dipole (between |0,0> and |1,0>)
     strength = sqrt(reduce(+, intensities)) / (1 / sqrt(3))
@@ -186,17 +186,17 @@ If `polarization` is an `Int`, then it is interpreted as the spherical component
 ``σ-`` polarization). If `polarization` is a `SphericalUnitVector`, then the polarization is interpreted as linear along that axis.
 
 """
-function calculate_transition_strength_coherent(spectrum::Spectrum, g::Vector{ComplexF64}, e::Vector{ComplexF64}, polarization::Int)
+function calculate_transition_strength_coherent(spectrum::Spectrum, g::Vector{ComplexF64}, e::Vector{ComplexF64}, polarization::Int)::ComplexF64
     @assert polarization <= 1 && polarization >= -1
 
     index = polarization + 2 # components are p = -1, 0, 1
     h_dipole = spectrum.hamiltonian_parts.dipole_relative[index]
-    return abs(g' * h_dipole * e) / (1 / sqrt(3))
+    return e' * h_dipole * g / (1 / sqrt(3))
 end
 
-function calculate_transition_strength_coherent(spectrum::Spectrum, g::Vector{ComplexF64}, e::Vector{ComplexF64}, polarization::SphericalUnitVector)
+function calculate_transition_strength_coherent(spectrum::Spectrum, g::Vector{ComplexF64}, e::Vector{ComplexF64}, polarization::SphericalUnitVector)::ComplexF64
     h_dipole = tensor_dot(T⁽¹⁾(polarization), spectrum.hamiltonian_parts.dipole_relative)
-    return abs(g' * h_dipole * e) / (1 / sqrt(3))
+    return e' * h_dipole * g / (1 / sqrt(3))
 end
 
 """
@@ -225,7 +225,7 @@ function plot_transition_strengths(
         find_transition_strengths(spectrum, g, frequency_range; polarization = polarization)
 
     freqs = [t[1] for t in transitions]
-    strengths = [t[2] for t in transitions]
+    strengths = [abs(t[2]) for t in transitions]
 
     Gadfly.plot(
         x = freqs,
@@ -259,7 +259,6 @@ function calculate_dipolar_interaction(
         get_eigenstate(spectrum, index_e);
         p=p
     )
-
 end
 
 function calculate_dipolar_interaction(
@@ -268,8 +267,9 @@ function calculate_dipolar_interaction(
     e::Vector{ComplexF64};
     p::Int = 0
 )
-    d_p = [calculate_transition_strength_coherent(spectrum, g, e, pol) for pol=-1:1]
-    return get_tensor_component(p, T⁽²⁾(d_p, d_p))
+    d_1 = [Complex(calculate_transition_strength_coherent(spectrum, g, e, pol)) for pol=-1:1]
+    d_2 = [Complex(calculate_transition_strength_coherent(spectrum, e, g, pol)) for pol=-1:1]
+    return get_tensor_component(p, T⁽²⁾(d_1, d_2)) * sqrt(6) / 2
 end
 
 end # module
