@@ -40,12 +40,12 @@ function h_tensor_component(basis::Vector{State}, matrix_element::Function, p::I
     H = spzeros(ComplexF64, elts, elts)
     for i = 1:elts
         ket = basis[i]
-        for j = i:elts
+        for j = 1:elts
             bra = basis[j]
             H[i, j] = matrix_element(p, bra, ket)
         end
     end
-    return Hermitian(H)
+    return H
 end
 
 """
