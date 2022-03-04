@@ -8,5 +8,10 @@ Compute the energy levels of diatomic ${}^{1} \Sigma$ molecules in magnetic, ele
 - [ ] Graphing
 - [x] Improve code organization
 - [ ] Documentation
-- [ ] Remove unnecessary types in function signatures (?)
+    - [ ] Make it build!
+- [ ] Remove unnecessary types in function arguments (?)
+- [ ] API ergonomics
+    - [x] ExternalFields
+    - [ ] ...
+- [ ] Switch to `get_eigenstates` function
 - [ ] Explicitly type fields of all structs

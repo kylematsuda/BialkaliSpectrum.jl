@@ -324,7 +324,11 @@ struct ExternalFields
     ExternalFields(B::SphericalVector, E::SphericalVector, Optical) = new(B, E, Optical)
 end
 
-ExternalFields(B::Float64, E::Float64) = ExternalFields(VectorZ(B), VectorZ(E), [])
+ExternalFields() = ExternalFields(0.0, 0.0, [])
+ExternalFields(B, E) = ExternalFields(B, E, [])
+ExternalFields(B::Float64, E, Optical) = ExternalFields(VectorZ(B), E, Optical)
+ExternalFields(B, E::Float64, Optical) = ExternalFields(B, VectorZ(E), Optical)
+ExternalFields(B::Float64, E::Float64, Optical) = ExternalFields(VectorZ(B), VectorZ(E), Optical)
 
 const DEFAULT_FIELDS = ExternalFields(545.9, 0.0)
 const TEST_FIELDS = ExternalFields(
