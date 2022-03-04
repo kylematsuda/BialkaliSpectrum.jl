@@ -257,6 +257,18 @@ function T⁽²⁾(v::SphericalUnitVector)::SVector{5,ComplexF64}
     return SVector(conj(T22), -conj(T21), T20, T21, T22)
 end
 
+function T⁽²⁾(T1a::SVector{3, ComplexF64}, T1b::SVector{3, ComplexF64})::SVector{5,ComplexF64}
+    (T1am1, T1a0, T1ap1) = T1a
+    (T1bm1, T1b0, T1bm1) = T1b
+
+    T22 = T1ap1 * T1bp1
+    T21 = (1/sqrt(2)) * (T1ap1 * T1b0 + T1a0 * T1bp1)
+    T20 = (1/sqrt(6)) * (2*T1a0*T1b0 + T1ap1 * T1bm1 + T1am1 * T1bp1)
+    T2m1 = (1/sqrt(2)) * (T1am1 * T1b0 + T1a0 * T1bm1)
+    T2m2 = T1am1 * T1bm1
+    return SVector(T2m2, T2m1, T20, T21, T22)
+end
+
 function get_tensor_component(p::Int, tensor::Vector{ComplexF64})
     rank::Int = (length(tensor) - 1) // 2 # Length should be 2*k + 1
     return tensor[1+(p+rank)]

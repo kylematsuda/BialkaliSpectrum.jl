@@ -9,3 +9,4 @@ Compute the energy levels of diatomic ${}^{1} \Sigma$ molecules in magnetic, ele
 - [x] Improve code organization
 - [ ] Documentation
 - [ ] Remove unnecessary types in function signatures (?)
+- [ ] Explicitly type fields of all structs

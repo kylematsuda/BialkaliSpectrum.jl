@@ -21,7 +21,9 @@ export get_energy, get_energy_difference
 
 export HamiltonianParts, make_hamiltonian_parts, hamiltonian, make_krb_hamiltonian_parts
 
-export Spectrum, calculate_spectrum, find_transition_strengths, plot_transition_strengths
+export Spectrum, calculate_spectrum
+export find_transition_strengths, plot_transition_strengths
+export calculate_dipolar_interaction
 
 module Constants
 "Nuclear magneton in MHz/G\n"
@@ -74,6 +76,8 @@ struct Spectrum
     energies::Any
     eigenstates::Any
 end
+
+get_eigenstate(spectrum, k) = spectrum.eigenstates[:, k]
 
 include("utility.jl")
 include("matrix_elements.jl")
@@ -231,6 +235,41 @@ function plot_transition_strengths(
         Gadfly.Guide.xlabel("Frequency (MHz)"),
         Gadfly.Guide.ylabel("Transition strength"),
     )
+end
+
+function calculate_dipolar_interaction(
+    spectrum::Spectrum,
+    g::State,
+    e::State;
+    p::Int = 0
+)
+    (overlap, index_g) = max_overlap_with(spectrum, g)
+    if overlap < 0.5
+        @warn "The best overlap with your requested ground state is < 0.5."
+    end
+
+    (overlap, index_e) = max_overlap_with(spectrum, e)
+    if overlap < 0.5
+        @warn "The best overlap with your requested excited state is < 0.5."
+    end
+
+    return calculate_dipolar_interaction(
+        spectrum,
+        get_eigenstate(spectrum, index_g),
+        get_eigenstate(spectrum, index_e);
+        p=p
+    )
+
+end
+
+function calculate_dipolar_interaction(
+    spectrum::Spectrum,
+    g::Vector{ComplexF64},
+    e::Vector{ComplexF64};
+    p::Int = 0
+)
+    d_p = [calculate_transition_strength_coherent(spectrum, g, e, pol) for pol=-1:1]
+    return get_tensor_component(p, T⁽²⁾(d_p, d_p))
 end
 
 end # module
