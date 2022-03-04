@@ -185,11 +185,3 @@ See also [`calculate_spectrum`](@ref), [`get_energy`](@ref).
 function get_energy_difference(spectrum::Spectrum, g::State, e::State)
     return mapreduce(x -> get_energy(spectrum, x), -, [e, g])
 end
-
-function generate_basis(molecular_parameters::MolecularParameters, N_max::Int)
-    n_elts::Int = (N_max + 1)^2 * mapreduce(n_hyperfine, *, molecular_parameters.I)
-    return map(
-        k -> index_to_state(k, molecular_parameters.I[1], molecular_parameters.I[2]),
-        1:n_elts,
-    )
-end

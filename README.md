@@ -12,6 +12,9 @@ Compute the energy levels of diatomic ${}^{1} \Sigma$ molecules in magnetic, ele
 - [ ] Remove unnecessary types in function arguments (?)
 - [ ] API ergonomics
     - [x] ExternalFields
+    - [ ] Get dipole matrix elements
+    - [ ] More generally... inspect any matrix element?
+    - [ ] Make more `calculate` functions polymorphic over `State`, eigenstate index, etc
     - [ ] ...
 - [ ] Switch to `get_eigenstates` function
 - [ ] Explicitly type fields of all structs

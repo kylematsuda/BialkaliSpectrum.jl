@@ -124,6 +124,9 @@ function make_ac(molecular_parameters::MolecularParameters, basis::Vector{State}
     return (ac_scalar, ac_tensor)
 end
 
+# Type alias for convenience
+const SparseHamiltonian = SparseMatrixCSC{ComplexF64, Int64}
+
 """
     HamiltonianParts
 
@@ -140,14 +143,22 @@ Used as an input to [`calculate_spectrum`](@ref) and [`hamiltonian`](@ref).
 See also [`make_hamiltonian_parts`](@ref), [`make_krb_hamiltonian_parts`](@ref).
 """
 struct HamiltonianParts
-    basis::Any
-    rotation::Any
-    dipole::SVector{3}
-    dipole_relative::SVector{3} # used for transition strengths
-    hyperfine::Any
-    zeeman::SVector{3}
-    ac_scalar::Any
-    ac_tensor::SVector{5}
+    basis::Vector{State}
+    rotation::SparseHamiltonian
+    dipole::SVector{3, SparseHamiltonian}
+    dipole_relative::SVector{3, SparseHamiltonian} # used for transition strengths
+    hyperfine::SparseHamiltonian
+    zeeman::SVector{3, SparseHamiltonian}
+    ac_scalar::SparseHamiltonian
+    ac_tensor::SVector{5, SparseHamiltonian}
+end
+
+function generate_basis(molecular_parameters::MolecularParameters, N_max::Int)
+    n_elts::Int = (N_max + 1)^2 * mapreduce(n_hyperfine, *, molecular_parameters.I)
+    return map(
+        k -> index_to_state(k, molecular_parameters.I[1], molecular_parameters.I[2]),
+        1:n_elts,
+    )
 end
 
 """

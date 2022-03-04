@@ -71,17 +71,18 @@ See also [`State`](@ref).
 KRbState(N, mₙ, mK, mRb) =
     State(N, mₙ, KRb_Parameters_Neyenhuis.I, [HalfInt(mK) HalfInt(mRb)])
 
+include("matrix_elements.jl")
+include("hamiltonian.jl")
+
 struct Spectrum
-    hamiltonian_parts::Any
-    energies::Any
+    hamiltonian_parts::HamiltonianParts
+    energies::Vector{Float64}
     eigenstates::Any
 end
 
 get_eigenstate(spectrum, k) = spectrum.eigenstates[:, k]
 
 include("utility.jl")
-include("matrix_elements.jl")
-include("hamiltonian.jl")
 
 """
     calculate_spectrum(hamiltonian_parts, external_fields)
@@ -150,7 +151,7 @@ function find_transition_strengths(
     if polarization === nothing
         strengths = [calculate_transition_strength_incoherent(spectrum, g_state, e) for e in states]
     else
-        strengths = [calculate_transition_strength_coherent(spectrum, g_state, e, polarization) for e in states]
+        strengths = [abs(calculate_transition_strength_coherent(spectrum, g_state, e, polarization)) for e in states]
     end
     closest_basis_states = map(e -> find_closest_basis_state(spectrum, e), state_range)
 
