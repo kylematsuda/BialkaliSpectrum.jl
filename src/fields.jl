@@ -97,7 +97,7 @@ Vectors along ``x``, ``y``, or ``z`` can be quickly constructed
 using [`UnitVectorX`](@ref), [`UnitVectorY`](@ref), and [`UnitVectorZ`](@ref),
 respectively.
 
-See also [`SphericalVector`](@ref), [`transition_strengths`](@ref),
+See also [`SphericalVector`](@ref), [`find_transition_strengths`](@ref),
 [`T⁽¹⁾`](@ref), [`T⁽²⁾`](@ref).
 """
 struct SphericalUnitVector

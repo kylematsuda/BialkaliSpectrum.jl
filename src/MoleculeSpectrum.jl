@@ -93,7 +93,7 @@ Compute the energies and eigenstates under the external fields.
 
 To avoid reconstructing the Hamiltonian each time, `hamiltonian_parts` can be reused over calls
 to `calculate_spectrum`. The output [`Spectrum`](@ref) object is used as an input for
-further analysis, for example in [`transition_strengths`](@ref).
+further analysis, for example in [`find_transition_strengths`](@ref).
 
 See also [`make_hamiltonian_parts`](@ref), [`make_krb_hamiltonian_parts`](@ref),
 [`Spectrum`](@ref).
