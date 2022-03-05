@@ -12,3 +12,7 @@ makedocs(
         "API Documentation" => "api.md"
     ]
 )
+
+deploydocs(
+    repo = "github.com/cal-miller-harvard/MoleculeSpectrum.jl.git", #TODO: Change to your username
+)
