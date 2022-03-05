@@ -269,6 +269,11 @@ function T⁽²⁾(T1a, T1b)::SVector{5,ComplexF64}
     return SVector(T2m2, T2m1, T20, T21, T22)
 end
 
+"""
+    get_tensor_component(p::Int, tensor)
+
+#TODO: Document what `get_tensor_component` does.
+"""
 function get_tensor_component(p::Int, tensor)
     rank::Int = (length(tensor) - 1) // 2 # Length should be 2*k + 1
     return tensor[1+(p+rank)]
@@ -330,7 +335,22 @@ ExternalFields(B::Float64, E, Optical) = ExternalFields(VectorZ(B), E, Optical)
 ExternalFields(B, E::Float64, Optical) = ExternalFields(B, VectorZ(E), Optical)
 ExternalFields(B::Float64, E::Float64, Optical) = ExternalFields(VectorZ(B), VectorZ(E), Optical)
 
+"""
+    DEFAULT_FIELDS = ExternalFields(545.9, 0.0)
+
+Defines an [`ExternalFields`](@ref) with a magnetic field of 545.9 G along the `z` axis.
+"""
 const DEFAULT_FIELDS = ExternalFields(545.9, 0.0)
+
+"""
+    TEST_FIELDS = ExternalFields(
+        SphericalVector(545.9, π / 4, π / 4),
+        SphericalVector(1000.0, 3π / 4, 7π / 4),
+        [SphericalVector(2350.0, 0.0, 0.0)],
+    )
+
+Defines an [`ExternalFields`](@ref) with a magnetic, electric, and optical fields for tests.
+"""
 const TEST_FIELDS = ExternalFields(
     SphericalVector(545.9, π / 4, π / 4),
     SphericalVector(1000.0, 3π / 4, 7π / 4),

@@ -6,10 +6,6 @@
     Depth = 4
 ```
 
-## Index
-```@index
-```
-
 ## Molecular Parameters
 ### Molecular Parameters
 ```@docs
@@ -99,4 +95,8 @@ get_energy_difference
 find_transition_strengths
 plot_transition_strengths
 calculate_dipolar_interaction
+```
+
+## Index
+```@index
 ```

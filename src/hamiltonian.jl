@@ -128,7 +128,18 @@ end
 const SparseHamiltonian = SparseMatrixCSC{ComplexF64, Int64}
 
 """
-    HamiltonianParts
+```
+struct HamiltonianParts
+    basis::Vector{State}
+    rotation::SparseHamiltonian
+    dipole::SVector{3, SparseHamiltonian}
+    dipole_relative::SVector{3, SparseHamiltonian} # used for transition strengths
+    hyperfine::SparseHamiltonian
+    zeeman::SVector{3, SparseHamiltonian}
+    ac_scalar::SparseHamiltonian
+    ac_tensor::SVector{5, SparseHamiltonian}
+end
+```
 
 Contains all parts of the Hamiltonian except external fields.
 
@@ -216,6 +227,8 @@ end
     hamiltonian(parts, external_fields)
 
 Construct the full Hamiltonian including magnetic, electric, and optical fields.
+
+Returns a dense Hermitian matrix.
 
 The field-independent building blocks in `parts` can be reused over calls
 to `hamiltonian` to avoid recalculating the matrix elements each time.
