@@ -1,15 +1,21 @@
-```@meta
-CurrentModule = MoleculeSpectrum
-```
+# MoleculeSpectrum.jl
 
-```@docs
-State(N, mₙ, I₁, mᵢ₁, I₂, mᵢ₂)
-```
+Computes the energy levels of diatomic ${}^{1} \Sigma$ molecules in magnetic, electric, and optical fields.
 
-```@docs
-    plot_transition_strengths(spectrum::Spectrum, g::State, frequency_range; polarization::SphericalUnitVector=Unpolarized())
-```
-
-```@docs
-    transition_strengths(spectrum::Spectrum, g::State, frequency_range; polarization::SphericalUnitVector=Unpolarized())
-```
+# Todo
+- [x] Add transition strengths
+- [ ] Dump to file, and/or dataframes?
+- [ ] Graphing
+- [x] Improve code organization
+- [ ] Documentation
+    - [ ] Make it build!
+- [ ] Remove unnecessary types in function arguments (?)
+- [ ] API ergonomics
+    - [x] ExternalFields
+    - [ ] Get dipole matrix elements
+    - [ ] More generally... inspect any matrix element?
+    - [ ] Make more `calculate` functions polymorphic over `State`, eigenstate index, etc
+    - [ ] ...
+- [x] Switch to `get_eigenstates` function
+- [x] Explicitly type fields of all structs
+- [ ] Many more tests!!!

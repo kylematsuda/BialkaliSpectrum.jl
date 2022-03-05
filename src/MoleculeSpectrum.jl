@@ -11,7 +11,7 @@ export KRb_Parameters_Neyenhuis,
     KRb_Parameters_Ospelkaus, DEFAULT_MOLECULAR_PARAMETERS, TOY_MOLECULE_PARAMETERS
 
 export SphericalVector, VectorX, VectorY, VectorZ
-export SphericalUnitVector, UnitVectorX, UnitVectorY, UnitVectorZ, Unpolarized
+export SphericalUnitVector, UnitVectorX, UnitVectorY, UnitVectorZ
 export T⁽¹⁾, T⁽²⁾, get_tensor_component, tensor_dot
 export ExternalFields, DEFAULT_FIELDS, TEST_FIELDS
 
@@ -40,7 +40,14 @@ include("molecular_parameters.jl")
 include("fields.jl")
 
 """
-    State
+```
+struct State
+    N::Int
+    mₙ::Int
+    I::SVector{2,HalfInt}
+    mᵢ::SVector{2,HalfInt}
+end
+```
 
 Represents a molecular state in the uncoupled basis.
 """
@@ -74,13 +81,36 @@ KRbState(N, mₙ, mK, mRb) =
 include("matrix_elements.jl")
 include("hamiltonian.jl")
 
+"""
+    Spectrum(hamiltonian_parts, energies, eigenstates)
+
+Represents a molecular spectrum, including eigenvalues and eigenstates,
+given [`HamiltonianParts`](@ref) and [`ExternalFields`](@ref).
+
+Created from [`calculate_spectrum`](@ref). See [`decompose_to_basis_states`](@ref) and
+[`get_energy`](@ref)for access to eigenstates and energies.
+"""
 struct Spectrum
     hamiltonian_parts::HamiltonianParts
     energies::Vector{Float64}
     eigenstates::Vector{Vector{ComplexF64}}
 end
 
+"""
+    get_eigenstate(spectrum, k)
+
+Returns the vector of coefficients corresponding to the `k`th lowest energy state.
+"""
 get_eigenstate(spectrum, k) = spectrum.eigenstates[k]
+
+"""
+    get_energies(spectrum)
+    get_energies(spectrum, range)
+
+Returns a list of the energies, in increasing order.
+
+If the optional argument `range` is included, only return energies between `range[1]` and `range[2]`.
+"""
 get_energies(spectrum) = spectrum.energies
 get_energies(spectrum, range) = filter(x -> (x >= range[1] && x <= range[2]), spectrum.energies)
 
@@ -93,7 +123,7 @@ Compute the energies and eigenstates under the external fields.
 
 To avoid reconstructing the Hamiltonian each time, `hamiltonian_parts` can be reused over calls
 to `calculate_spectrum`. The output [`Spectrum`](@ref) object is used as an input for
-further analysis, for example in [`transition_strengths`](@ref).
+further analysis, for example in [`find_transition_strengths`](@ref).
 
 See also [`make_hamiltonian_parts`](@ref), [`make_krb_hamiltonian_parts`](@ref),
 [`Spectrum`](@ref).
@@ -103,8 +133,9 @@ function calculate_spectrum(
     external_fields::ExternalFields,
 )::Spectrum
     h = hamiltonian(hamiltonian_parts, external_fields)
-    energies = eigvals(h)
-    eigenstates = [c for c in eachcol(eigvecs(h))]
+    e = eigen(h)
+    energies = e.values
+    eigenstates = [c for c in eachcol(e.vectors)]
     return Spectrum(hamiltonian_parts, energies, eigenstates)
 end
 
@@ -239,6 +270,12 @@ function plot_transition_strengths(
     )
 end
 
+"""
+    calculate_dipolar_interaction(spectrum::Spectrum, g::State, e::State; p::Int = 0)
+    calculate_dipolar_interaction(spectrum::Spectrum, g::Vector{ComplexF64}, e::Vector{ComplexF64}; p::Int = 0)
+
+#TODO: Document `calculate_dipolar_interaction`
+"""
 function calculate_dipolar_interaction(
     spectrum::Spectrum,
     g::State,
