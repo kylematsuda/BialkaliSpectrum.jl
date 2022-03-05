@@ -303,19 +303,19 @@ The `Optical` argument can also be left as an empty vector `[]`.
 See also [`calculate_spectrum`](@ref), [`hamiltonian`](@ref), [`SphericalVector`](@ref).
 
 # Examples
-```jldoctest
+```jldoctest; output = false
 julia> ExternalFields(VectorZ(545.9), VectorX(1020.0), [])
 ExternalFields(SphericalVector(545.9, 0.0, 0.0), SphericalVector(1020.0, 1.5707963267948966, 0.0), SphericalVector[])
 ```
 
-```jldoctest
+```jldoctest; output = false
 julia> ExternalFields(545.9, 1020.0)
 ExternalFields(SphericalVector(545.9, 0.0, 0.0), SphericalVector(1020.0, 0.0, 0.0), SphericalVector[])
 ```
 
-```jldoctest
+```jldoctest; output = false
 julia> ExternalFields(VectorZ(545.9), VectorX(1020.0), [VectorY(2300.), SphericalVector(2300., π/2, π/4)])
-[...]
+ExternalFields(SphericalVector(545.9, 0.0, 0.0), SphericalVector(1020.0, 1.5707963267948966, 0.0), SphericalVector[SphericalVector(2300.0, 1.5707963267948966, 1.5707963267948966), SphericalVector(2300.0, 1.5707963267948966, 0.7853981633974483)])
 ```
 """
 struct ExternalFields

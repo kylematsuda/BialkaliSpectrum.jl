@@ -1,5 +1,12 @@
 # MoleculeSpectrum.jl API Documentation
 
+```@meta
+    CurrentModule = MoleculeSpectrum
+    DocTestSetup  = quote
+        using MoleculeSpectrum
+    end
+```
+
 ## Contents
 ```@contents
     Pages = ["api.md"]

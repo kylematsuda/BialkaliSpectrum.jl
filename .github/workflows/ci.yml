@@ -60,8 +60,9 @@ jobs:
             Pkg.instantiate()'
       - run: |
           julia --project=docs -e '
-            using Documenter: doctest
+            using Documenter: doctest, DocMeta
             using MoleculeSpectrum
+            DocMeta.setdocmeta!(MoleculeSpectrum, :DocTestSetup, :(using MoleculeSpectrum;); recursive=true)
             doctest(MoleculeSpectrum)'
       - run: julia --project=docs docs/make.jl
         env:
