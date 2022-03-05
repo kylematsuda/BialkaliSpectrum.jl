@@ -103,8 +103,9 @@ function calculate_spectrum(
     external_fields::ExternalFields,
 )::Spectrum
     h = hamiltonian(hamiltonian_parts, external_fields)
-    energies = eigvals(h)
-    eigenstates = [c for c in eachcol(eigvecs(h))]
+    e = eigen(h)
+    energies = e.values
+    eigenstates = [c for c in eachcol(e.vectors)]
     return Spectrum(hamiltonian_parts, energies, eigenstates)
 end
 
