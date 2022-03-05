@@ -11,7 +11,7 @@ export KRb_Parameters_Neyenhuis,
     KRb_Parameters_Ospelkaus, DEFAULT_MOLECULAR_PARAMETERS, TOY_MOLECULE_PARAMETERS
 
 export SphericalVector, VectorX, VectorY, VectorZ
-export SphericalUnitVector, UnitVectorX, UnitVectorY, UnitVectorZ, Unpolarized
+export SphericalUnitVector, UnitVectorX, UnitVectorY, UnitVectorZ
 export T⁽¹⁾, T⁽²⁾, get_tensor_component, tensor_dot
 export ExternalFields, DEFAULT_FIELDS, TEST_FIELDS
 
