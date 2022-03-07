@@ -113,6 +113,10 @@ See also [`calculate_spectrum`](@ref), [`max_overlap_with`](@ref).
 """
 function find_closest_basis_state(spectrum::Spectrum, index)
     state = get_eigenstate(spectrum, index)
+    return find_closest_basis_state(spectrum, state)
+end
+
+function find_closest_basis_state(spectrum::Spectrum, state::Vector{ComplexF64})
     weights = map(abs2, state)
     index = findmax(weights)[2]
     return spectrum.hamiltonian_parts.basis[index]

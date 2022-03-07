@@ -336,3 +336,16 @@ const TEST_FIELDS = ExternalFields(
     SphericalVector(1000.0, 3π / 4, 7π / 4),
     [SphericalVector(2350.0, 0.0, 0.0)],
 )
+
+"""
+    generate_fields_scan(Bs, Es, Opticals)
+
+Produce a vector of [`ExternalFields`](@ref) for creating a scan of spectra as a function of fields.
+"""
+function generate_fields_scan(Bs, Es, Opticals)
+    if length(Opticals) == 0
+        Opticals = [[]]
+    end
+
+    return [ExternalFields(B, E, O) for B in Bs for E in Es for O in Opticals]
+end

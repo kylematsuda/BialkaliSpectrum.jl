@@ -3,6 +3,7 @@ module MoleculeSpectrum
 import WignerSymbols: wigner3j
 import HalfIntegers: HalfInt
 import Gadfly
+import DataFrames
 using LinearAlgebra, SparseArrays, StaticArrays, Test
 
 export ZeemanParameters, NuclearParameters, Polarizability, MolecularParameters
@@ -13,7 +14,7 @@ export KRb_Parameters_Neyenhuis,
 export SphericalVector, VectorX, VectorY, VectorZ
 export SphericalUnitVector, UnitVectorX, UnitVectorY, UnitVectorZ, Unpolarized
 export T⁽¹⁾, T⁽²⁾, get_tensor_component, tensor_dot
-export ExternalFields, DEFAULT_FIELDS, TEST_FIELDS
+export ExternalFields, DEFAULT_FIELDS, TEST_FIELDS, generate_fields_scan
 
 export State, KRbState, index_to_state, state_to_index
 export order_by_overlap_with, max_overlap_with, find_closest_basis_state, decompose_to_basis_states
@@ -76,6 +77,7 @@ include("hamiltonian.jl")
 
 struct Spectrum
     hamiltonian_parts::HamiltonianParts
+    external_fields::ExternalFields
     energies::Vector{Float64}
     eigenstates::Vector{Vector{ComplexF64}}
 end
@@ -105,7 +107,7 @@ function calculate_spectrum(
     h = hamiltonian(hamiltonian_parts, external_fields)
     energies = eigvals(h)
     eigenstates = [c for c in eachcol(eigvecs(h))]
-    return Spectrum(hamiltonian_parts, energies, eigenstates)
+    return Spectrum(hamiltonian_parts, external_fields, energies, eigenstates)
 end
 
 """
@@ -273,5 +275,7 @@ function calculate_dipolar_interaction(
     d_2 = [Complex(calculate_transition_strength_coherent(spectrum, e, g, pol)) for pol=-1:1]
     return get_tensor_component(p, T⁽²⁾(d_1, d_2)) * sqrt(6) / 2
 end
+
+
 
 end # module
