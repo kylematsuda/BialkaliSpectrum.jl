@@ -84,26 +84,26 @@ state_to_named_tuple(s::State) = (N = s.N, m_n = s.mₙ, I_1 = s.I[1], m_i1 = s.
 include("matrix_elements.jl")
 include("hamiltonian.jl")
 
-struct Spectrum
-    hamiltonian_parts::HamiltonianParts
-    external_fields::ExternalFields
-    energies::Vector{Float64}
-    eigenstates::Vector{Vector{ComplexF64}}
-end
+# struct Spectrum
+#     hamiltonian_parts::HamiltonianParts
+#     external_fields::ExternalFields
+#     energies::Vector{Float64}
+#     eigenstates::Vector{Vector{ComplexF64}}
+# end
 
-get_eigenstate(spectrum, k) = spectrum.eigenstates[k]
-get_eigenstates(spectrum) = spectrum.eigenstates
+# get_eigenstate(spectrum, k) = spectrum.eigenstates[k]
+# get_eigenstates(spectrum) = spectrum.eigenstates
 
-get_energy(spectrum, k) = spectrum.energies[k]
-get_energies(spectrum) = spectrum.energies
-get_energies(spectrum, range) = filter(x -> (x >= range[1] && x <= range[2]), spectrum.energies)
+# get_energy(spectrum, k) = spectrum.energies[k]
+# get_energies(spectrum) = spectrum.energies
+# get_energies(spectrum, range) = filter(x -> (x >= range[1] && x <= range[2]), spectrum.energies)
 
-get_eigensystem(spectrum) = map(
-    ((i, x),) -> (i, x...),
-    enumerate(
-        zip(get_energies(spectrum), get_eigenstates(spectrum))
-    )
-)
+# get_eigensystem(spectrum) = map(
+#     ((i, x),) -> (i, x...),
+#     enumerate(
+#         zip(get_energies(spectrum), get_eigenstates(spectrum))
+#     )
+# )
 
 include("utility.jl")
 
@@ -122,270 +122,375 @@ See also [`make_hamiltonian_parts`](@ref), [`make_krb_hamiltonian_parts`](@ref),
 function calculate_spectrum(
     hamiltonian_parts::HamiltonianParts,
     external_fields::ExternalFields,
-)::Spectrum
+)
     h = hamiltonian(hamiltonian_parts, external_fields)
     es = eigen(h)
-    energies = es.values
-    eigenstates = [c for c in eachcol(es.vectors)]
-    return Spectrum(hamiltonian_parts, external_fields, energies, eigenstates)
-end
+    states = [c for c = eachcol(es.vectors)]
+    df = DataFrames.DataFrame(fields = external_fields, index = 1:length(es.values), energy = es.values, eigenstate = states)
 
-function spectrum_to_dataframe(
-    spectrum::Spectrum;
-    fields_handler = external_fields -> (B = external_fields.B.magnitude, E = external_fields.E.magnitude)
-)
-    fields = fields_handler(spectrum.external_fields)
-
-    rows = map(
-        ((i, energy, state),) -> (index = i, fields..., energy = energy, eigenstate = state),
-        get_eigensystem(spectrum)
+    closest_basis_states = map(
+        s -> find_closest_basis_state(hamiltonian_parts, s).state |> state_to_named_tuple,
+        states
     )
-    return DataFrames.DataFrame(rows)
+    basis_states = DataFrames.DataFrame(closest_basis_states)
+
+    return DataFrames.hcat(df, basis_states)
 end
 
-function analyze_spectrum(spectrum::Spectrum, analyzer::Function)
-    lambda = ((i, x, y),) -> analyzer(spectrum, i, x, y)
-    rows = map(lambda, get_eigensystem(spectrum))
-    return DataFrames.DataFrame(rows)
-end
-
-function analyzer_nearest_state(spectrum, index, energy, state)
-    return (index = index, energy = energy, state_to_named_tuple(find_closest_basis_state(spectrum, state))..., )
-end
-
-function make_analyzer_transition_strength(
-    spectrum::Spectrum,
-    g::State,
-    polarization::Union{Int, SphericalUnitVector, Nothing} = nothing
+function find_closest_basis_state(
+    parts::HamiltonianParts,
+    state
 )
+    weights = map(abs2, state)
+    (weight, index) = findmax(weights)
+    return (weight = weight, state = parts.basis[index])
+end
 
-    (overlap, index_g) = max_overlap_with(spectrum, g)
-    if overlap < 0.5
+function find_closest_eigenstate(
+    spectrum,
+    state::State,
+)
+    state_index = state_to_index(state)
+    get_weight(e) = abs2(e[state_index])
+
+    states = DataFrames.select(spectrum, [:index, :eigenstate])
+    DataFrames.transform!(states, :eigenstate => (e -> map(get_weight, e)) => :weight)
+    DataFrames.sort!(states, DataFrames.order(:weight, rev=true))
+
+    return DataFrames.first(states)
+end
+
+function calculate_transition_strengths(
+    spectrum,
+    hamiltonian_parts::HamiltonianParts,
+    g::State;
+    cutoff = 1e-4,
+    frequency_range::Union{Vector, Nothing} = nothing
+)
+    closest = find_closest_eigenstate(spectrum, g)
+    if closest.weight < 0.5
         @warn "The best overlap with your requested ground state is < 0.5."
     end
-    E_g = get_energies(spectrum)[index_g]
-    g_state = get_eigenstate(spectrum, index_g)
+    g_index, g_vec = closest.index, closest.eigenstate
+    E_g = DataFrames.filter(:index => i -> i == g_index, spectrum).energy[1]
 
-    if polarization === nothing
-        strength = (spec, e) -> calculate_transition_strength_incoherent(spec, g_state, e)
-    else
-        strength = (spec, e) -> calculate_transition_strength_coherent(spec, g_state, e, polarization)
-    end
-
-    return (spec, _, energy, state) -> (
-        transition_frequency = energy - E_g,
-        transition_strength = strength(spec, state),
-    )
-end
-
-compose_analyzers(analyzer_1, analyzer_2) =
-    (spec, index, energy, state) -> merge(
-            analyzer_1(spec, index, energy, state),
-            analyzer_2(spec, index, energy, state)
+    df = DataFrames.transform(spectrum, [:energy] => (es -> map(E -> E - E_g, es)) => [:transition_frequency])
+    if frequency_range !== nothing
+        DataFrames.filter!(
+            :transition_frequency => f -> f >= frequency_range[1] && f <= frequency_range[2],
+            df
         )
-
-"""
-    find_transition_strengths(spectrum::Spectrum, g::State, frequency_range; polarization::Union{Int, SphericalUnitVector, Nothing}=nothing)
-
-Compute electric dipole transitions out of `g` with energy between `frequency_range[1]` and `frequency_range[2]`.
-
-The output is a `Vector` of tuples `(frequency, strength, closest_basis_state, eigenstate_index)`, produced in
-decreasing order of transition strength. The `strength` is the absolute value of the dipole matrix element,
-normalized by ``D/\\sqrt{3}`` (the maximum transition dipole between ``N = 0`` and ``N = 1``). We use
-the absolute value of the matrix element, rather than its square, so the results are proportional to
-Rabi frequency ``Ω``.
-
-The `polarization` keyword argument can be used to choose a specific microwave polarization. This defaults to `nothing`,
-which returns the incoherent sum over ``σ-``, ``π``, and ``σ+``. If `polarization` is an `Int`, then it is interpreted as
-the spherical component `p = -1:1` of the dipole operator (`p == -1` corresponds to ``σ-`` polarization). If
-`polarization` is a `SphericalUnitVector`, then the polarization is interpreted as linear along that axis.
-
-There is a convenience method [`plot_transition_strengths`](@ref) that immediately produces a plot from the result.
-
-See also [`plot_transition_strengths`](@ref), [`make_hamiltonian_parts`](@ref), [`make_krb_hamiltonian_parts`](@ref),
-[`Spectrum`](@ref).
-"""
-function find_transition_strengths(
-    spectrum::Spectrum,
-    g::State,
-    frequency_range;
-    polarization::Union{Int, SphericalUnitVector, Nothing} = nothing
-)
-    energies = get_energies(spectrum)
-
-    (overlap, index_g) = max_overlap_with(spectrum, g)
-    if overlap < 0.5
-        @warn "The best overlap with your requested ground state is < 0.5."
-    end    
-    E_g = energies[index_g]
-    g_state = get_eigenstate(spectrum, index_g)
-
-    state_range =
-        searchsortedfirst(energies, frequency_range[1] + E_g):searchsortedlast(energies, frequency_range[2] + E_g)
-    states = [get_eigenstate(spectrum, k) for k in state_range]
-    frequencies = [energies[k] - E_g for k in state_range]
-
-    if polarization === nothing
-        strengths = [calculate_transition_strength_incoherent(spectrum, g_state, e) for e in states]
-    else
-        strengths = [abs(calculate_transition_strength_coherent(spectrum, g_state, e, polarization)) for e in states]
     end
-    closest_basis_states = map(e -> find_closest_basis_state(spectrum, e), state_range)
 
-    out = [x for x in zip(frequencies, strengths, closest_basis_states, state_range)]
-    return sort!(out, by = t -> t[2], rev = true)
+    get_matrix_elements(eigenstate) = [
+        calculate_transition_strength_coherent(hamiltonian_parts, g_vec, eigenstate, p) |> abs for p = -1:1
+    ]
+    DataFrames.transform!(
+        df,
+        [:eigenstate] => (es -> map(ei -> get_matrix_elements(ei), es)) => [:σp, :π, :σm]
+    )
+
+    get_strengths(sp, p, sm) = abs2.(sp) + abs2.(p) + abs2.(sm)
+    DataFrames.transform!(
+        df,
+        [:σp, :π, :σm] => get_strengths => [:transition_strength]
+    )
+
+    DataFrames.filter!(
+        :transition_strength => ts -> ts > cutoff,
+        df
+    )
+    DataFrames.sort!(df, DataFrames.order(:transition_strength, rev=true))
+    return df
 end
 
-
-"""
-    calculate_transition_strength_incoherent(spectrum::Spectrum, g::Vector{ComplexF64}, e::Vector{ComplexF64})
-
-Compute the transition strength from `g` to `e` for an even incoherent mixture of polarizations.
-
-The incoherent sum is formed by calculating the squared matrix elements of ``|⟨g|H_p|e⟩|^2`` for each
-spherical component `p = -1:1` of the dipole Hamiltonian, summing the three values, and then taking the square root.
-"""
-function calculate_transition_strength_incoherent(spectrum::Spectrum, g::Vector{ComplexF64}, e::Vector{ComplexF64})
-    h_dipole = spectrum.hamiltonian_parts.dipole_relative
-    intensities = [abs2(e' * h_dipole[p] * g) for p in 1:3]
-
-    # Normalize to d/sqrt(3), which is the largest transition dipole (between |0,0> and |1,0>)
-    strength = sqrt(reduce(+, intensities)) / (1 / sqrt(3))
-    return strength
-end
-
-"""
-    calculate_transition_strength_coherent(spectrum::Spectrum, g::Vector{ComplexF64}, e::Vector{ComplexF64}, polarization::Int)
-    calculate_transition_strength_coherent(spectrum::Spectrum, g::Vector{ComplexF64}, e::Vector{ComplexF64}, polarization::SphericalUnitVector)
-
-Compute the transition strength from `g` to `e`, driven by a field with the given `polarization`.
-
-If `polarization` is an `Int`, then it is interpreted as the spherical component `p = -1:1` of the dipole operator (`p == -1` corresponds to 
-``σ-`` polarization). If `polarization` is a `SphericalUnitVector`, then the polarization is interpreted as linear along that axis.
-
-"""
-function calculate_transition_strength_coherent(spectrum::Spectrum, g::Vector{ComplexF64}, e::Vector{ComplexF64}, polarization::Int)::ComplexF64
+function calculate_transition_strength_coherent(
+    hamiltonian_parts::HamiltonianParts,
+    g,
+    e,
+    polarization::Int
+)::ComplexF64
     @assert polarization <= 1 && polarization >= -1
 
     index = polarization + 2 # components are p = -1, 0, 1
-    h_dipole = spectrum.hamiltonian_parts.dipole_relative[index]
+    h_dipole = hamiltonian_parts.dipole_relative[index]
     return e' * h_dipole * g / (1 / sqrt(3))
 end
 
-function calculate_transition_strength_coherent(spectrum::Spectrum, g::Vector{ComplexF64}, e::Vector{ComplexF64}, polarization::SphericalUnitVector)::ComplexF64
-    h_dipole = tensor_dot(T⁽¹⁾(polarization), spectrum.hamiltonian_parts.dipole_relative)
-    return e' * h_dipole * g / (1 / sqrt(3))
-end
-
-"""
-    plot_transition_strengths(spectrum::Spectrum, g::State, frequency_range; polarization::Union{Int, SphericalUnitVector, Nothing}=nothing)
-
-Plot the frequencies and strengths of electric dipole transitions out of `g`,
-with energy between `frequency_range[1]` and `frequency_range[2]`.
-
-The `polarization` keyword argument can be used to choose a specific microwave polarization. This defaults to `nothing`,
-which returns the incoherent sum over ``σ-``, ``π``, and ``σ+``. If `polarization` is an `Int`, then it is interpreted as
-the spherical component `p = -1:1` of the dipole operator (`p == -1` corresponds to ``σ-`` polarization). If
-`polarization` is a `SphericalUnitVector`, then the polarization is interpreted as linear along that axis.
-
-This method calls [`find_transition_strengths`](@ref) internally.
-
-See also [`find_transition_strengths`](@ref), [`make_hamiltonian_parts`](@ref), [`make_krb_hamiltonian_parts`](@ref),
-[`Spectrum`](@ref).
-"""
-function plot_transition_strengths(
-    spectrum::Spectrum,
-    g::State,
-    frequency_range;
-    polarization::Union{Int, SphericalUnitVector, Nothing}=nothing
+function calculate_spectra_vs_fields(
+    hamiltonian_parts::HamiltonianParts,
+    fields_scan::Vector{ExternalFields},
+    df_transform::Union{Function, Nothing} = nothing
 )
-    transitions =
-        find_transition_strengths(spectrum, g, frequency_range; polarization = polarization)
+    out = DataFrames.DataFrame()
+    for field in fields_scan
+        df = calculate_spectrum(hamiltonian_parts, field)
 
-    freqs = [t[1] for t in transitions]
-    strengths = [abs(t[2]) for t in transitions]
-
-    Gadfly.plot(
-        x = freqs,
-        y = strengths,
-        Gadfly.Geom.hair,
-        Gadfly.Geom.point,
-        Gadfly.Guide.xlabel("Frequency (MHz)"),
-        Gadfly.Guide.ylabel("Transition strength"),
-    )
+        if df_transform !== nothing
+            df = df_transform(df)
+        end
+        out = DataFrames.vcat(out, df, cols = :orderequal)
+    end
+    
+    return out
 end
 
-function calculate_dipolar_interaction(
-    spectrum::Spectrum,
-    g::State,
-    e::State;
-    p::Int = 0
-)
-    (overlap, index_g) = max_overlap_with(spectrum, g)
-    if overlap < 0.5
-        @warn "The best overlap with your requested ground state is < 0.5."
-    end
+# function spectrum_to_dataframe(
+#     spectrum::Spectrum;
+#     fields_handler = external_fields -> (B = external_fields.B.magnitude, E = external_fields.E.magnitude)
+# )
+#     fields = fields_handler(spectrum.external_fields)
 
-    (overlap, index_e) = max_overlap_with(spectrum, e)
-    if overlap < 0.5
-        @warn "The best overlap with your requested excited state is < 0.5."
-    end
+#     rows = map(
+#         ((i, energy, state),) -> (index = i, fields..., energy = energy, eigenstate = state),
+#         get_eigensystem(spectrum)
+#     )
+#     return DataFrames.DataFrame(rows)
+# end
 
-    return calculate_dipolar_interaction(
-        spectrum,
-        get_eigenstate(spectrum, index_g),
-        get_eigenstate(spectrum, index_e);
-        p=p
-    )
-end
+# function analyze_spectrum(spectrum::Spectrum, analyzer::Function)
+#     lambda = ((i, x, y),) -> analyzer(spectrum, i, x, y)
+#     rows = map(lambda, get_eigensystem(spectrum))
+#     return DataFrames.DataFrame(rows)
+# end
 
-function calculate_dipolar_interaction(
-    spectrum::Spectrum,
-    g::Vector{ComplexF64},
-    e::Vector{ComplexF64};
-    p::Int = 0
-)
-    d_1 = [Complex(calculate_transition_strength_coherent(spectrum, g, e, pol)) for pol=-1:1]
-    d_2 = [Complex(calculate_transition_strength_coherent(spectrum, e, g, pol)) for pol=-1:1]
-    return get_tensor_component(p, T⁽²⁾(d_1, d_2)) * sqrt(6) / 2
-end
+# function analyzer_nearest_state(spectrum, index, energy, state)
+#     return (index = index, energy = energy, state_to_named_tuple(find_closest_basis_state(spectrum, state))..., )
+# end
 
-function calculate_dipole_matrix_element(
-    spectrum::Spectrum,
-    g::State,
-    e::State,
-    p::Int = 0
-)   
-    (overlap, index_g) = max_overlap_with(spectrum, g)
-    if overlap < 0.5
-        @warn "The best overlap with your requested ground state is < 0.5."
-    end
+# function make_analyzer_transition_strength(
+#     spectrum::Spectrum,
+#     g::State,
+#     polarization::Union{Int, SphericalUnitVector, Nothing} = nothing
+# )
 
-    (overlap, index_e) = max_overlap_with(spectrum, e)
-    if overlap < 0.5
-        @warn "The best overlap with your requested excited state is < 0.5."
-    end
+#     (overlap, index_g) = max_overlap_with(spectrum, g)
+#     if overlap < 0.5
+#         @warn "The best overlap with your requested ground state is < 0.5."
+#     end
+#     E_g = get_energies(spectrum)[index_g]
+#     g_state = get_eigenstate(spectrum, index_g)
 
-    return calculate_dipole_matrix_element(
-        spectrum,
-        get_eigenstate(spectrum, index_g),
-        get_eigenstate(spectrum, index_e),
-        p
-    )
-end
+#     if polarization === nothing
+#         strength = (spec, e) -> calculate_transition_strength_incoherent(spec, g_state, e)
+#     else
+#         strength = (spec, e) -> calculate_transition_strength_coherent(spec, g_state, e, polarization)
+#     end
 
-function calculate_dipole_matrix_element(
-    spectrum::Spectrum,
-    g::Vector{ComplexF64},
-    e::Vector{ComplexF64},
-    p::Int = 0
-)   
-    @assert p <= 1 && p >= -1
+#     return (spec, _, energy, state) -> (
+#         transition_frequency = energy - E_g,
+#         transition_strength = strength(spec, state),
+#     )
+# end
 
-    index = p + 2 # components are p = -1, 0, 1
-    h_dipole = spectrum.hamiltonian_parts.dipole[index]
-    return e' * h_dipole * g
+# compose_analyzers(analyzer_1, analyzer_2) =
+#     (spec, index, energy, state) -> merge(
+#             analyzer_1(spec, index, energy, state),
+#             analyzer_2(spec, index, energy, state)
+#         )
+
+# """
+#     find_transition_strengths(spectrum::Spectrum, g::State, frequency_range; polarization::Union{Int, SphericalUnitVector, Nothing}=nothing)
+
+# Compute electric dipole transitions out of `g` with energy between `frequency_range[1]` and `frequency_range[2]`.
+
+# The output is a `Vector` of tuples `(frequency, strength, closest_basis_state, eigenstate_index)`, produced in
+# decreasing order of transition strength. The `strength` is the absolute value of the dipole matrix element,
+# normalized by ``D/\\sqrt{3}`` (the maximum transition dipole between ``N = 0`` and ``N = 1``). We use
+# the absolute value of the matrix element, rather than its square, so the results are proportional to
+# Rabi frequency ``Ω``.
+
+# The `polarization` keyword argument can be used to choose a specific microwave polarization. This defaults to `nothing`,
+# which returns the incoherent sum over ``σ-``, ``π``, and ``σ+``. If `polarization` is an `Int`, then it is interpreted as
+# the spherical component `p = -1:1` of the dipole operator (`p == -1` corresponds to ``σ-`` polarization). If
+# `polarization` is a `SphericalUnitVector`, then the polarization is interpreted as linear along that axis.
+
+# There is a convenience method [`plot_transition_strengths`](@ref) that immediately produces a plot from the result.
+
+# See also [`plot_transition_strengths`](@ref), [`make_hamiltonian_parts`](@ref), [`make_krb_hamiltonian_parts`](@ref),
+# [`Spectrum`](@ref).
+# """
+# function find_transition_strengths(
+#     spectrum::Spectrum,
+#     g::State,
+#     frequency_range;
+#     polarization::Union{Int, SphericalUnitVector, Nothing} = nothing
+# )
+#     energies = get_energies(spectrum)
+
+#     (overlap, index_g) = max_overlap_with(spectrum, g)
+#     if overlap < 0.5
+#         @warn "The best overlap with your requested ground state is < 0.5."
+#     end    
+#     E_g = energies[index_g]
+#     g_state = get_eigenstate(spectrum, index_g)
+
+#     state_range =
+#         searchsortedfirst(energies, frequency_range[1] + E_g):searchsortedlast(energies, frequency_range[2] + E_g)
+#     states = [get_eigenstate(spectrum, k) for k in state_range]
+#     frequencies = [energies[k] - E_g for k in state_range]
+
+#     if polarization === nothing
+#         strengths = [calculate_transition_strength_incoherent(spectrum, g_state, e) for e in states]
+#     else
+#         strengths = [abs(calculate_transition_strength_coherent(spectrum, g_state, e, polarization)) for e in states]
+#     end
+#     closest_basis_states = map(e -> find_closest_basis_state(spectrum, e), state_range)
+
+#     out = [x for x in zip(frequencies, strengths, closest_basis_states, state_range)]
+#     return sort!(out, by = t -> t[2], rev = true)
+# end
+
+
+# """
+#     calculate_transition_strength_incoherent(spectrum::Spectrum, g::Vector{ComplexF64}, e::Vector{ComplexF64})
+
+# Compute the transition strength from `g` to `e` for an even incoherent mixture of polarizations.
+
+# The incoherent sum is formed by calculating the squared matrix elements of ``|⟨g|H_p|e⟩|^2`` for each
+# spherical component `p = -1:1` of the dipole Hamiltonian, summing the three values, and then taking the square root.
+# """
+# function calculate_transition_strength_incoherent(spectrum::Spectrum, g::Vector{ComplexF64}, e::Vector{ComplexF64})
+#     h_dipole = spectrum.hamiltonian_parts.dipole_relative
+#     intensities = [abs2(e' * h_dipole[p] * g) for p in 1:3]
+
+#     # Normalize to d/sqrt(3), which is the largest transition dipole (between |0,0> and |1,0>)
+#     strength = sqrt(reduce(+, intensities)) / (1 / sqrt(3))
+#     return strength
+# end
+
+# """
+#     calculate_transition_strength_coherent(spectrum::Spectrum, g::Vector{ComplexF64}, e::Vector{ComplexF64}, polarization::Int)
+#     calculate_transition_strength_coherent(spectrum::Spectrum, g::Vector{ComplexF64}, e::Vector{ComplexF64}, polarization::SphericalUnitVector)
+
+# Compute the transition strength from `g` to `e`, driven by a field with the given `polarization`.
+
+# If `polarization` is an `Int`, then it is interpreted as the spherical component `p = -1:1` of the dipole operator (`p == -1` corresponds to 
+# ``σ-`` polarization). If `polarization` is a `SphericalUnitVector`, then the polarization is interpreted as linear along that axis.
+
+# """
+# function calculate_transition_strength_coherent(spectrum::Spectrum, g::Vector{ComplexF64}, e::Vector{ComplexF64}, polarization::Int)::ComplexF64
+#     @assert polarization <= 1 && polarization >= -1
+
+#     index = polarization + 2 # components are p = -1, 0, 1
+#     h_dipole = spectrum.hamiltonian_parts.dipole_relative[index]
+#     return e' * h_dipole * g / (1 / sqrt(3))
+# end
+
+# function calculate_transition_strength_coherent(spectrum::Spectrum, g::Vector{ComplexF64}, e::Vector{ComplexF64}, polarization::SphericalUnitVector)::ComplexF64
+#     h_dipole = tensor_dot(T⁽¹⁾(polarization), spectrum.hamiltonian_parts.dipole_relative)
+#     return e' * h_dipole * g / (1 / sqrt(3))
+# end
+
+# """
+#     plot_transition_strengths(spectrum::Spectrum, g::State, frequency_range; polarization::Union{Int, SphericalUnitVector, Nothing}=nothing)
+
+# Plot the frequencies and strengths of electric dipole transitions out of `g`,
+# with energy between `frequency_range[1]` and `frequency_range[2]`.
+
+# The `polarization` keyword argument can be used to choose a specific microwave polarization. This defaults to `nothing`,
+# which returns the incoherent sum over ``σ-``, ``π``, and ``σ+``. If `polarization` is an `Int`, then it is interpreted as
+# the spherical component `p = -1:1` of the dipole operator (`p == -1` corresponds to ``σ-`` polarization). If
+# `polarization` is a `SphericalUnitVector`, then the polarization is interpreted as linear along that axis.
+
+# This method calls [`find_transition_strengths`](@ref) internally.
+
+# See also [`find_transition_strengths`](@ref), [`make_hamiltonian_parts`](@ref), [`make_krb_hamiltonian_parts`](@ref),
+# [`Spectrum`](@ref).
+# """
+# function plot_transition_strengths(
+#     spectrum::Spectrum,
+#     g::State,
+#     frequency_range;
+#     polarization::Union{Int, SphericalUnitVector, Nothing}=nothing
+# )
+#     transitions =
+#         find_transition_strengths(spectrum, g, frequency_range; polarization = polarization)
+
+#     freqs = [t[1] for t in transitions]
+#     strengths = [abs(t[2]) for t in transitions]
+
+#     Gadfly.plot(
+#         x = freqs,
+#         y = strengths,
+#         Gadfly.Geom.hair,
+#         Gadfly.Geom.point,
+#         Gadfly.Guide.xlabel("Frequency (MHz)"),
+#         Gadfly.Guide.ylabel("Transition strength"),
+#     )
+# end
+
+# function calculate_dipolar_interaction(
+#     spectrum::Spectrum,
+#     g::State,
+#     e::State;
+#     p::Int = 0
+# )
+#     (overlap, index_g) = max_overlap_with(spectrum, g)
+#     if overlap < 0.5
+#         @warn "The best overlap with your requested ground state is < 0.5."
+#     end
+
+#     (overlap, index_e) = max_overlap_with(spectrum, e)
+#     if overlap < 0.5
+#         @warn "The best overlap with your requested excited state is < 0.5."
+#     end
+
+#     return calculate_dipolar_interaction(
+#         spectrum,
+#         get_eigenstate(spectrum, index_g),
+#         get_eigenstate(spectrum, index_e);
+#         p=p
+#     )
+# end
+
+# function calculate_dipolar_interaction(
+#     spectrum::Spectrum,
+#     g::Vector{ComplexF64},
+#     e::Vector{ComplexF64};
+#     p::Int = 0
+# )
+#     d_1 = [Complex(calculate_transition_strength_coherent(spectrum, g, e, pol)) for pol=-1:1]
+#     d_2 = [Complex(calculate_transition_strength_coherent(spectrum, e, g, pol)) for pol=-1:1]
+#     return get_tensor_component(p, T⁽²⁾(d_1, d_2)) * sqrt(6) / 2
+# end
+
+# function calculate_dipole_matrix_element(
+#     spectrum::Spectrum,
+#     g::State,
+#     e::State,
+#     p::Int = 0
+# )   
+#     (overlap, index_g) = max_overlap_with(spectrum, g)
+#     if overlap < 0.5
+#         @warn "The best overlap with your requested ground state is < 0.5."
+#     end
+
+#     (overlap, index_e) = max_overlap_with(spectrum, e)
+#     if overlap < 0.5
+#         @warn "The best overlap with your requested excited state is < 0.5."
+#     end
+
+#     return calculate_dipole_matrix_element(
+#         spectrum,
+#         get_eigenstate(spectrum, index_g),
+#         get_eigenstate(spectrum, index_e),
+#         p
+#     )
+# end
+
+# function calculate_dipole_matrix_element(
+#     spectrum::Spectrum,
+#     g::Vector{ComplexF64},
+#     e::Vector{ComplexF64},
+#     p::Int = 0
+# )   
+#     @assert p <= 1 && p >= -1
+
+#     index = p + 2 # components are p = -1, 0, 1
+#     h_dipole = spectrum.hamiltonian_parts.dipole[index]
+#     return e' * h_dipole * g
    
-end
+# end
 
 end # module
