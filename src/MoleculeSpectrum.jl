@@ -22,9 +22,9 @@ export get_energy, get_energy_difference
 
 export HamiltonianParts, make_hamiltonian_parts, hamiltonian, make_krb_hamiltonian_parts
 
-export Spectrum, calculate_spectrum
+export Spectrum, calculate_spectrum, analyze_spectrum
 export find_transition_strengths, plot_transition_strengths
-export calculate_dipolar_interaction
+export calculate_dipolar_interaction, calculate_dipole_matrix_element
 
 module Constants
 "Nuclear magneton in MHz/G\n"
@@ -72,6 +72,15 @@ See also [`State`](@ref).
 KRbState(N, mₙ, mK, mRb) =
     State(N, mₙ, KRb_Parameters_Neyenhuis.I, [HalfInt(mK) HalfInt(mRb)])
 
+"""
+    state_to_named_tuple(s::State)
+
+Creates a named tuple with fields `N`, `m_n`, `I_1`, `m_i1`, `I_2`, `m_i2` from `s`.
+
+This is a utility function to simplify outputting to a `DataFrame`.
+"""
+state_to_named_tuple(s::State) = (N = s.N, m_n = s.mₙ, I_1 = s.I[1], m_i1 = s.mᵢ[1], I_2 = s.I[2], m_i2 = s.mᵢ[2])
+
 include("matrix_elements.jl")
 include("hamiltonian.jl")
 
@@ -82,9 +91,16 @@ struct Spectrum
     eigenstates::Vector{Vector{ComplexF64}}
 end
 
+get_eigenstates(spectrum) = spectrum.eigenstates
 get_eigenstate(spectrum, k) = spectrum.eigenstates[k]
 get_energies(spectrum) = spectrum.energies
 get_energies(spectrum, range) = filter(x -> (x >= range[1] && x <= range[2]), spectrum.energies)
+get_eigensystem(spectrum) = map(
+    ((i, x),) -> (i, x...),
+    enumerate(
+        zip(get_energies(spectrum), get_eigenstates(spectrum))
+    )
+)
 
 include("utility.jl")
 
@@ -109,6 +125,47 @@ function calculate_spectrum(
     eigenstates = [c for c in eachcol(eigvecs(h))]
     return Spectrum(hamiltonian_parts, external_fields, energies, eigenstates)
 end
+
+function analyze_spectrum(spectrum::Spectrum, analyzer::Function)
+    lambda = ((i, x, y),) -> analyzer(spectrum, i, x, y)
+    rows = map(lambda, get_eigensystem(spectrum))
+    return DataFrames.DataFrame(rows)
+end
+
+function analyzer_nearest_state(spectrum, index, energy, state)
+    return (index = index, energy = energy, state_to_named_tuple(find_closest_basis_state(spectrum, state))..., )
+end
+
+function make_analyzer_transition_strength(
+    spectrum::Spectrum,
+    g::State,
+    polarization::Union{Int, SphericalUnitVector, Nothing} = nothing
+)
+
+    (overlap, index_g) = max_overlap_with(spectrum, g)
+    if overlap < 0.5
+        @warn "The best overlap with your requested ground state is < 0.5."
+    end
+    E_g = get_energies(spectrum)[index_g]
+    g_state = get_eigenstate(spectrum, index_g)
+
+    if polarization === nothing
+        strength = (spec, e) -> calculate_transition_strength_incoherent(spec, g_state, e)
+    else
+        strength = (spec, e) -> calculate_transition_strength_coherent(spec, g_state, e, polarization)
+    end
+
+    return (spec, _index, energy, state) -> (
+        transition_frequency = energy - E_g,
+        transition_strength = strength(spec, state),
+    )
+end
+
+compose_analyzers(analyzer_1, analyzer_2) =
+    (spec, index, energy, state) -> merge(
+            analyzer_1(spec, index, energy, state),
+            analyzer_2(spec, index, energy, state)
+        )
 
 """
     find_transition_strengths(spectrum::Spectrum, g::State, frequency_range; polarization::Union{Int, SphericalUnitVector, Nothing}=nothing)
@@ -276,6 +333,42 @@ function calculate_dipolar_interaction(
     return get_tensor_component(p, T⁽²⁾(d_1, d_2)) * sqrt(6) / 2
 end
 
+function calculate_dipole_matrix_element(
+    spectrum::Spectrum,
+    g::State,
+    e::State,
+    p::Int = 0
+)   
+    (overlap, index_g) = max_overlap_with(spectrum, g)
+    if overlap < 0.5
+        @warn "The best overlap with your requested ground state is < 0.5."
+    end
 
+    (overlap, index_e) = max_overlap_with(spectrum, e)
+    if overlap < 0.5
+        @warn "The best overlap with your requested excited state is < 0.5."
+    end
+
+    return calculate_dipole_matrix_element(
+        spectrum,
+        get_eigenstate(spectrum, index_g),
+        get_eigenstate(spectrum, index_e),
+        p
+    )
+end
+
+function calculate_dipole_matrix_element(
+    spectrum::Spectrum,
+    g::Vector{ComplexF64},
+    e::Vector{ComplexF64},
+    p::Int = 0
+)   
+    @assert p <= 1 && p >= -1
+
+    index = p + 2 # components are p = -1, 0, 1
+    h_dipole = spectrum.hamiltonian_parts.dipole[index]
+    return e' * h_dipole * g
+   
+end
 
 end # module
