@@ -130,6 +130,19 @@ function calculate_spectrum(
     return Spectrum(hamiltonian_parts, external_fields, energies, eigenstates)
 end
 
+function spectrum_to_dataframe(
+    spectrum::Spectrum;
+    fields_handler = external_fields -> (B = external_fields.B.magnitude, E = external_fields.E.magnitude)
+)
+    fields = fields_handler(spectrum.external_fields)
+
+    rows = map(
+        ((i, energy, state),) -> (index = i, fields..., energy = energy, eigenstate = state),
+        get_eigensystem(spectrum)
+    )
+    return DataFrames.DataFrame(rows)
+end
+
 function analyze_spectrum(spectrum::Spectrum, analyzer::Function)
     lambda = ((i, x, y),) -> analyzer(spectrum, i, x, y)
     rows = map(lambda, get_eigensystem(spectrum))
