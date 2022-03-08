@@ -91,10 +91,13 @@ struct Spectrum
     eigenstates::Vector{Vector{ComplexF64}}
 end
 
-get_eigenstates(spectrum) = spectrum.eigenstates
 get_eigenstate(spectrum, k) = spectrum.eigenstates[k]
+get_eigenstates(spectrum) = spectrum.eigenstates
+
+get_energy(spectrum, k) = spectrum.energies[k]
 get_energies(spectrum) = spectrum.energies
 get_energies(spectrum, range) = filter(x -> (x >= range[1] && x <= range[2]), spectrum.energies)
+
 get_eigensystem(spectrum) = map(
     ((i, x),) -> (i, x...),
     enumerate(
