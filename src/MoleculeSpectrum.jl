@@ -121,8 +121,9 @@ function calculate_spectrum(
     external_fields::ExternalFields,
 )::Spectrum
     h = hamiltonian(hamiltonian_parts, external_fields)
-    energies = eigvals(h)
-    eigenstates = [c for c in eachcol(eigvecs(h))]
+    es = eigen(h)
+    energies = es.values
+    eigenstates = [c for c in eachcol(es.vectors)]
     return Spectrum(hamiltonian_parts, external_fields, energies, eigenstates)
 end
 
@@ -155,7 +156,7 @@ function make_analyzer_transition_strength(
         strength = (spec, e) -> calculate_transition_strength_coherent(spec, g_state, e, polarization)
     end
 
-    return (spec, _index, energy, state) -> (
+    return (spec, _, energy, state) -> (
         transition_frequency = energy - E_g,
         transition_strength = strength(spec, state),
     )
