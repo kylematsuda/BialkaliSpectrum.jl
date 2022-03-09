@@ -3,7 +3,7 @@ module MoleculeSpectrum
 import WignerSymbols: wigner3j
 import HalfIntegers: HalfInt
 # import Gadfly
-import CairoMakie
+using CairoMakie
 import DataFrames
 using LinearAlgebra, SparseArrays, StaticArrays, Test
 
@@ -24,7 +24,7 @@ export get_energy, get_energy_difference, get_row_by_state
 export HamiltonianParts, make_hamiltonian_parts, hamiltonian, make_krb_hamiltonian_parts
 
 export calculate_spectrum, calculate_spectra_vs_fields
-export calculate_transition_strengths
+export calculate_transition_strengths, plot_transition_strengths
 
 module Constants
 "Nuclear magneton in MHz/G\n"
@@ -149,14 +149,15 @@ end
 function calculate_transition_strengths(
     spectrum,
     hamiltonian_parts::HamiltonianParts,
-    g::State;
+    g::State,
+    frequency_range::Union{Vector, Nothing} = nothing;
+    tol = 0.5,
     cutoff = 1e-4,
-    frequency_range::Union{Vector, Nothing} = nothing
 )
-    closest = find_closest_eigenstate(spectrum, g)
+    closest = find_closest_eigenstate(spectrum, g; tol=tol)
     E_g, g_vec = closest.energy, closest.eigenstate
 
-    df = DataFrames.transform(spectrum, [:energy] => (es -> map(E -> E - E_g, es)) => [:transition_frequency])
+    df = DataFrames.transform(spectrum, :energy => (es -> map(E -> E - E_g, es)) => :transition_frequency)
     if frequency_range !== nothing
         DataFrames.filter!(
             :transition_frequency => f -> f >= frequency_range[1] && f <= frequency_range[2],
@@ -185,6 +186,29 @@ function calculate_transition_strengths(
     )
     DataFrames.sort!(df, DataFrames.order(:transition_strength, rev=true))
     return df
+end
+
+function plot_transition_strengths(
+    spectrum,
+    hamiltonian_parts::HamiltonianParts,
+    g::State,
+    frequency_range::Union{Vector, Nothing} = nothing;
+    tol = 0.5,
+    cutoff = 1e-4,
+)
+    df = calculate_transition_strengths(spectrum, hamiltonian_parts, g, frequency_range; tol=tol, cutoff=cutoff)
+    DataFrames.filter!(:transition_frequency => f -> f > 0, df)
+
+    f = Figure(fontsize=18)
+    ax = Axis(
+        f[1,1],
+        xlabel = "Frequency (MHz)",
+        ylabel = "Relative transition dipole"
+    )
+
+    stem!(df.transition_frequency, df.transition_strength)
+    ylims!(ax, 0, 1)
+    return f
 end
 
 function calculate_dipole_matrix_element(
@@ -223,19 +247,21 @@ end
 
 function get_energy(
     spectrum,
-    s::State
+    s::State;
+    tol = 0.5
 )
-    closest = find_closest_eigenstate(spectrum, s)
+    closest = find_closest_eigenstate(spectrum, s; tol=tol)
     return closest.energy
 end
 
 function get_energy_difference(
     spectrum,
     g::State,
-    e::State
+    e::State;
+    tol = 0.5
 )
-    return find_closest_eigenstate(spectrum, e).energy -
-        find_closest_eigenstate(spectrum, g).energy
+    return find_closest_eigenstate(spectrum, e; tol=tol).energy -
+        find_closest_eigenstate(spectrum, g; tol=tol).energy
 end
 
 function get_row_by_state(
