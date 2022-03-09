@@ -129,16 +129,21 @@ end
 
 function find_closest_eigenstate(
     spectrum,
-    state::State,
+    state::State;
+    tol = 0.5
 )
     state_index = state_to_index(state)
     get_weight(e) = abs2(e[state_index])
 
-    states = DataFrames.select(spectrum, [:index, :eigenstate])
-    DataFrames.transform!(states, :eigenstate => (e -> map(get_weight, e)) => :weight)
+    states = DataFrames.transform(spectrum, :eigenstate => (e -> map(get_weight, e)) => :weight)
     DataFrames.sort!(states, DataFrames.order(:weight, rev=true))
+    out = DataFrames.first(states)
 
-    return DataFrames.first(states)
+    if out.weight < tol
+        @warn "The best overlap with your requested state is lower than `tol`."
+    end
+
+    return out
 end
 
 function calculate_transition_strengths(
@@ -149,11 +154,7 @@ function calculate_transition_strengths(
     frequency_range::Union{Vector, Nothing} = nothing
 )
     closest = find_closest_eigenstate(spectrum, g)
-    if closest.weight < 0.5
-        @warn "The best overlap with your requested ground state is < 0.5."
-    end
-    g_index, g_vec = closest.index, closest.eigenstate
-    E_g = DataFrames.filter(:index => i -> i == g_index, spectrum).energy[1]
+    E_g, g_vec = closest.energy, closest.eigenstate
 
     df = DataFrames.transform(spectrum, [:energy] => (es -> map(E -> E - E_g, es)) => [:transition_frequency])
     if frequency_range !== nothing
@@ -225,11 +226,7 @@ function get_energy(
     s::State
 )
     closest = find_closest_eigenstate(spectrum, s)
-    if closest.weight < 0.5
-        @warn "The best overlap with your requested ground state is < 0.5."
-    end
-    E = DataFrames.filter(:index => i -> i == closest.index, spectrum).energy[1]
-    return E
+    return closest.energy
 end
 
 function get_energy_difference(
@@ -237,19 +234,8 @@ function get_energy_difference(
     g::State,
     e::State
 )
-    closest = find_closest_eigenstate(spectrum, g)
-    if closest.weight < 0.5
-        @warn "The best overlap with your requested ground state is < 0.5."
-    end
-    E_g = DataFrames.filter(:index => i -> i == closest.index, spectrum).energy[1]
-
-    closest = find_closest_eigenstate(spectrum, e)
-    if closest.weight < 0.5
-        @warn "The best overlap with your requested excited state is < 0.5."
-    end
-    E_e = DataFrames.filter(:index => i -> i == closest.index, spectrum).energy[1]
-
-    return E_e - E_g
+    return find_closest_eigenstate(spectrum, e).energy -
+        find_closest_eigenstate(spectrum, g).energy
 end
 
 function get_row_by_state(
