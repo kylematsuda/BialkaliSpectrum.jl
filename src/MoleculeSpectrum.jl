@@ -153,6 +153,7 @@ function calculate_transition_strengths(
     g::State,
     frequency_range::Union{Vector, Nothing} = nothing;
     tol = 0.5,
+    restrict_N = true,
     use_cutoff = true,
     cutoff = 1e-3,
 )
@@ -193,6 +194,14 @@ function calculate_transition_strengths(
         :transition_frequency => f -> f > 0,
         df
     )
+
+    if restrict_N
+        DataFrames.filter!(
+            :N => n -> n == g.N + 1,
+            df
+        )
+    end
+
     DataFrames.sort!(df, DataFrames.order(:transition_strength, rev=true))
     return df
 end
@@ -203,10 +212,11 @@ function plot_transition_strengths(
     g::State,
     frequency_range::Union{Vector, Nothing} = nothing;
     tol = 0.5,
+    restrict_N = true,
     use_cutoff = true,
     cutoff = 1e-3,
 )
-    df = calculate_transition_strengths(spectrum, hamiltonian_parts, g, frequency_range; tol=tol, use_cutoff=use_cutoff, cutoff=cutoff)
+    df = calculate_transition_strengths(spectrum, hamiltonian_parts, g, frequency_range; tol=tol, restrict_N=restrict_N, use_cutoff=use_cutoff, cutoff=cutoff)
 
     f = Figure(fontsize=18)
     ax = Axis(
@@ -236,6 +246,7 @@ function calculate_transitions_vs_E(
         g,
         frequency_range;
         tol=tol,
+        restrict_N = restrict_N,
         use_cutoff=use_cutoff,
         cutoff=cutoff
     )
@@ -248,13 +259,7 @@ function calculate_transitions_vs_E(
         df
     )
 
-    if restrict_N
-        transform = filter_N ∘ add_E ∘ strengths
-    else
-        transform = add_E ∘ strengths
-    end
-
-    spectra = calculate_spectra_vs_fields(hamiltonian_parts, fields_scan, transform)
+    spectra = calculate_spectra_vs_fields(hamiltonian_parts, fields_scan, add_E ∘ strengths)
     DataFrames.sort!(spectra, [:index, :E])
 
     return spectra
