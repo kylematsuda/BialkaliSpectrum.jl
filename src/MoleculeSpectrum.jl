@@ -2,7 +2,8 @@ module MoleculeSpectrum
 
 import WignerSymbols: wigner3j
 import HalfIntegers: HalfInt
-import Gadfly
+# import Gadfly
+import CairoMakie
 import DataFrames
 using LinearAlgebra, SparseArrays, StaticArrays, Test
 
@@ -129,8 +130,11 @@ function calculate_spectrum(
     df = DataFrames.DataFrame(fields = external_fields, index = 1:length(es.values), energy = es.values, eigenstate = states)
 
     closest_basis_states = map(
-        s -> find_closest_basis_state(hamiltonian_parts, s).state |> state_to_named_tuple,
-        states
+        s -> (basis_index = state_to_index(s), state_to_named_tuple(s)...),
+        map(
+            s -> find_closest_basis_state(hamiltonian_parts, s).state,
+            states
+        )
     )
     basis_states = DataFrames.DataFrame(closest_basis_states)
 
@@ -190,7 +194,7 @@ function calculate_transition_strengths(
         [:eigenstate] => (es -> map(ei -> get_matrix_elements(ei), es)) => [:σp, :π, :σm]
     )
 
-    get_strengths(sp, p, sm) = abs2.(sp) + abs2.(p) + abs2.(sm)
+    get_strengths(sp, p, sm) = sqrt.(abs2.(sp) + abs2.(p) + abs2.(sm))
     DataFrames.transform!(
         df,
         [:σp, :π, :σm] => get_strengths => [:transition_strength]
@@ -222,14 +226,17 @@ function calculate_spectra_vs_fields(
     fields_scan::Vector{ExternalFields},
     df_transform::Union{Function, Nothing} = nothing
 )
+    n_pts = length(fields_scan)
+
     out = DataFrames.DataFrame()
-    for field in fields_scan
+    for (i, field) in enumerate(fields_scan)
         df = calculate_spectrum(hamiltonian_parts, field)
 
         if df_transform !== nothing
             df = df_transform(df)
         end
         out = DataFrames.vcat(out, df, cols = :orderequal)
+        println(i, " of ", n_pts, " complete")
     end
     
     return out
