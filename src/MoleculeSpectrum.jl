@@ -19,12 +19,12 @@ export ExternalFields, DEFAULT_FIELDS, TEST_FIELDS, generate_fields_scan
 
 export State, KRbState, index_to_state, state_to_index
 export order_by_overlap_with, max_overlap_with, find_closest_basis_state, decompose_to_basis_states
-export get_energy, get_energy_difference
+export get_energy, get_energy_difference, get_row_by_state
 
 export HamiltonianParts, make_hamiltonian_parts, hamiltonian, make_krb_hamiltonian_parts
 
 export Spectrum, calculate_spectrum, analyze_spectrum
-export find_transition_strengths, plot_transition_strengths
+export calculate_transition_strengths, plot_transition_strengths
 export calculate_dipolar_interaction, calculate_dipole_matrix_element
 
 module Constants
@@ -191,7 +191,7 @@ function calculate_transition_strengths(
     ]
     DataFrames.transform!(
         df,
-        [:eigenstate] => (es -> map(ei -> get_matrix_elements(ei), es)) => [:d_plus, :d_0, :d_minus]
+        [:eigenstate] => (es -> map(ei -> get_matrix_elements(ei), es)) => [:d_minus, :d_0, :d_plus]
     )
 
     # The strength of |0> => |1> is D/sqrt(3).
@@ -243,6 +243,18 @@ function calculate_spectra_vs_fields(
     return out
 end
 
+function get_energy(
+    spectrum,
+    s::State
+)
+    closest = find_closest_eigenstate(spectrum, s)
+    if closest.weight < 0.5
+        @warn "The best overlap with your requested ground state is < 0.5."
+    end
+    E = DataFrames.filter(:index => i -> i == closest.index, spectrum).energy[1]
+    return E
+end
+
 function get_energy_difference(
     spectrum,
     g::State,
@@ -261,6 +273,14 @@ function get_energy_difference(
     E_e = DataFrames.filter(:index => i -> i == closest.index, spectrum).energy[1]
 
     return E_e - E_g
+end
+
+function get_row_by_state(
+    spectrum,
+    s::State
+)
+    index = state_to_index(s)
+    return DataFrames.filter(:basis_index => bi -> bi == index, spectrum)
 end
 
 # function spectrum_to_dataframe(

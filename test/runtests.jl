@@ -1,8 +1,11 @@
 using LinearAlgebra, SparseArrays, StaticArrays, Test
 using MoleculeSpectrum
+using DataFrames
+
+const N_max = 5
+const parts_neyenhuis = make_krb_hamiltonian_parts(N_max)
 
 @testset "Reproduces Ospelkaus et al., PRL 104, 030402 (2010)" begin
-    N_max = 5
     tolerance = 0.0011 # MHz
 
     fields = ExternalFields(545.9, 0.0)
@@ -35,12 +38,10 @@ using MoleculeSpectrum
 end
 
 @testset verbose = true "Reproduces Neyenhuis et al., PRL 109, 230403 (2012)" begin
-    N_max = 5
-    parts = make_hamiltonian_parts(KRb_Parameters_Neyenhuis, N_max)
     B = 545.9
 
     fields = ExternalFields(B, 0.0)
-    spectrum = calculate_spectrum(parts, fields)
+    spectrum = calculate_spectrum(parts_neyenhuis, fields)
 
     @testset "No optical fields" begin
         tolerance = 0.005 # MHz
@@ -94,7 +95,7 @@ end
             θ = c[1] * π / 180
             optical = SphericalVector(I_light, θ, 0.0)
             fields_with_light = ExternalFields(VectorZ(B), VectorZ(0.0), [optical])
-            spectrum_light = calculate_spectrum(parts, fields_with_light)
+            spectrum_light = calculate_spectrum(parts_neyenhuis, fields_with_light)
 
             es_light = map(x -> get_energy(spectrum_light, KRbState(x...)), states_to_check)
 
@@ -110,10 +111,8 @@ end
 end
 
 @testset "No angular dependence of energies with one field" begin
-    N_max = 5
     B = 545.9
     E = 1000.0
-    parts = make_hamiltonian_parts(KRb_Parameters_Neyenhuis, N_max)
 
     b_z = ExternalFields(B, 0.0)
     b_x = ExternalFields(VectorX(B), VectorZ(0.0), [])
@@ -128,19 +127,16 @@ end
     e_xyz = ExternalFields(VectorZ(0.0), SphericalVector(E, π / 3, π / 3), [])
 
     for fields in [(b_z, (b_x, b_y, b_xz, b_xyz)), (e_z, (e_x, e_y, e_xz, e_xyz))]
-        spectrum_z = calculate_spectrum(parts, fields[1])
+        spectrum_z = calculate_spectrum(parts_neyenhuis, fields[1])
 
         for f in fields[2]
-            spectrum = calculate_spectrum(parts, f)
-            @test spectrum.energies ≈ spectrum_z.energies
+            spectrum = calculate_spectrum(parts_neyenhuis, f)
+            @test spectrum.energy ≈ spectrum_z.energy
         end
     end
 end
 
 @testset "No azimuthal dependence of energies with one optical field" begin
-    N_max = 5
-    parts = make_hamiltonian_parts(KRb_Parameters_Neyenhuis, N_max)
-
     B = 545.9
     E = 0.0
     I_light = 2350.0
@@ -152,16 +148,15 @@ end
         φ = 0:2π/7:2π
     ]
 
-    sz = calculate_spectrum(parts, fields_z)
+    sz = calculate_spectrum(parts_neyenhuis, fields_z)
 
     for f in fields_test
-        s = calculate_spectrum(parts, f)
-        @test s.energies ≈ sz.energies
+        s = calculate_spectrum(parts_neyenhuis, f)
+        @test s.energy ≈ sz.energy
     end
 end
 
 @testset "Transition strengths without hyperfine couplings" begin
-    N_max = 5
     parts = make_hamiltonian_parts(TOY_MOLECULE_PARAMETERS, N_max)
     B = TOY_MOLECULE_PARAMETERS.Bᵣ
 
@@ -175,25 +170,20 @@ end
     e1m1 = State(1, -1, 1, 0, 1, 0)
     e1p1 = State(1, 1, 1, 0, 1, 0)
 
-    π_transitions =
-        find_transition_strengths(spectrum, g, frequency_range; polarization = UnitVectorZ())
-    @test all(π_transitions[1][1:2] .≈ (2 * B, 1.0))
-    @test π_transitions[1][3] == e10
+    df = calculate_transition_strengths(spectrum, parts, g)
 
-    x_transitions =
-        find_transition_strengths(spectrum, g, frequency_range; polarization = UnitVectorX())
-    @test all(x_transitions[1][1:2] .≈ (2 * B, 1 / sqrt(2)))
-    @test all(x_transitions[2][1:2] .≈ (2 * B, 1 / sqrt(2)))
-    @test (x_transitions[1][3] == e1p1 && x_transitions[2][3] == e1m1) ||
-          (x_transitions[1][3] == e1m1 && x_transitions[2][3] == e1p1)
+    # π transitions
+    π_first = sort(df, order(:d_0, by=abs2, rev=true))
+    @test abs(first(π_first).d_0) .≈ 1/sqrt(3)
+    @test first(π_first).basis_index == state_to_index(e10)
 
-    y_transitions =
-        find_transition_strengths(spectrum, g, frequency_range; polarization = UnitVectorY())
-    @test all(y_transitions[1][1:2] .≈ (2 * B, 1 / sqrt(2)))
-    @test all(y_transitions[2][1:2] .≈ (2 * B, 1 / sqrt(2)))
-    @test (y_transitions[1][3] == e1p1 && y_transitions[2][3] == e1m1) ||
-          (y_transitions[1][3] == e1m1 && y_transitions[2][3] == e1p1)
+    # σ+ transitions
+    dp_first = sort(df, order(:d_plus, by=abs2, rev=true))
+    @test abs(first(dp_first).d_plus) .≈ 1/sqrt(3)
+    @test first(dp_first).basis_index == state_to_index(e1p1)
 
-    unpol = find_transition_strengths(spectrum, g, frequency_range)
-    @test all(map(k -> ≈(k[2], 1.0), unpol[1:3]))
+    # σ- transitions
+    dm_first = sort(df, order(:d_minus, by=abs2, rev=true))
+    @test abs(first(dm_first).d_minus) .≈ 1/sqrt(3)
+    @test first(dm_first).basis_index == state_to_index(e1m1)
 end
