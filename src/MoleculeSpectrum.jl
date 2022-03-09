@@ -243,6 +243,26 @@ function calculate_spectra_vs_fields(
     return out
 end
 
+function get_energy_difference(
+    spectrum,
+    g::State,
+    e::State
+)
+    closest = find_closest_eigenstate(spectrum, g)
+    if closest.weight < 0.5
+        @warn "The best overlap with your requested ground state is < 0.5."
+    end
+    E_g = DataFrames.filter(:index => i -> i == closest.index, spectrum).energy[1]
+
+    closest = find_closest_eigenstate(spectrum, e)
+    if closest.weight < 0.5
+        @warn "The best overlap with your requested excited state is < 0.5."
+    end
+    E_e = DataFrames.filter(:index => i -> i == closest.index, spectrum).energy[1]
+
+    return E_e - E_g
+end
+
 # function spectrum_to_dataframe(
 #     spectrum::Spectrum;
 #     fields_handler = external_fields -> (B = external_fields.B.magnitude, E = external_fields.E.magnitude)
