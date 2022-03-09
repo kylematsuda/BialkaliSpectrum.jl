@@ -187,17 +187,18 @@ function calculate_transition_strengths(
     end
 
     get_matrix_elements(eigenstate) = [
-        calculate_transition_strength_coherent(hamiltonian_parts, g_vec, eigenstate, p) |> abs for p = -1:1
+        calculate_dipole_matrix_element(hamiltonian_parts, g_vec, eigenstate, p) |> abs for p = -1:1
     ]
     DataFrames.transform!(
         df,
-        [:eigenstate] => (es -> map(ei -> get_matrix_elements(ei), es)) => [:σp, :π, :σm]
+        [:eigenstate] => (es -> map(ei -> get_matrix_elements(ei), es)) => [:d_plus, :d_0, :d_minus]
     )
 
-    get_strengths(sp, p, sm) = sqrt.(abs2.(sp) + abs2.(p) + abs2.(sm))
+    # The strength of |0> => |1> is D/sqrt(3).
+    get_strengths(dp, d0, dm) = sqrt(3) * sqrt.(abs2.(dp) + abs2.(d0) + abs2.(dm))
     DataFrames.transform!(
         df,
-        [:σp, :π, :σm] => get_strengths => [:transition_strength]
+        [:d_plus, :d_0, :d_minus] => get_strengths => [:transition_strength]
     )
 
     DataFrames.filter!(
@@ -208,7 +209,7 @@ function calculate_transition_strengths(
     return df
 end
 
-function calculate_transition_strength_coherent(
+function calculate_dipole_matrix_element(
     hamiltonian_parts::HamiltonianParts,
     g,
     e,
@@ -218,7 +219,7 @@ function calculate_transition_strength_coherent(
 
     index = polarization + 2 # components are p = -1, 0, 1
     h_dipole = hamiltonian_parts.dipole_relative[index]
-    return e' * h_dipole * g / (1 / sqrt(3))
+    return e' * h_dipole * g
 end
 
 function calculate_spectra_vs_fields(
