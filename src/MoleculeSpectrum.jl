@@ -23,9 +23,8 @@ export get_energy, get_energy_difference, get_row_by_state
 
 export HamiltonianParts, make_hamiltonian_parts, hamiltonian, make_krb_hamiltonian_parts
 
-export Spectrum, calculate_spectrum, analyze_spectrum
-export calculate_transition_strengths, plot_transition_strengths
-export calculate_dipolar_interaction, calculate_dipole_matrix_element
+export calculate_spectrum, calculate_spectra_vs_fields
+export calculate_transition_strengths
 
 module Constants
 "Nuclear magneton in MHz/G\n"
@@ -84,28 +83,6 @@ state_to_named_tuple(s::State) = (N = s.N, m_n = s.mₙ, I_1 = s.I[1], m_i1 = s.
 
 include("matrix_elements.jl")
 include("hamiltonian.jl")
-
-# struct Spectrum
-#     hamiltonian_parts::HamiltonianParts
-#     external_fields::ExternalFields
-#     energies::Vector{Float64}
-#     eigenstates::Vector{Vector{ComplexF64}}
-# end
-
-# get_eigenstate(spectrum, k) = spectrum.eigenstates[k]
-# get_eigenstates(spectrum) = spectrum.eigenstates
-
-# get_energy(spectrum, k) = spectrum.energies[k]
-# get_energies(spectrum) = spectrum.energies
-# get_energies(spectrum, range) = filter(x -> (x >= range[1] && x <= range[2]), spectrum.energies)
-
-# get_eigensystem(spectrum) = map(
-#     ((i, x),) -> (i, x...),
-#     enumerate(
-#         zip(get_energies(spectrum), get_eigenstates(spectrum))
-#     )
-# )
-
 include("utility.jl")
 
 """
