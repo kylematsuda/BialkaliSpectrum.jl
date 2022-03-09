@@ -25,6 +25,7 @@ export HamiltonianParts, make_hamiltonian_parts, hamiltonian, make_krb_hamiltoni
 
 export calculate_spectrum, calculate_spectra_vs_fields
 export calculate_transition_strengths, plot_transition_strengths
+export calculate_transitions_vs_E, plot_transitions_vs_E
 
 module Constants
 "Nuclear magneton in MHz/G\n"
@@ -152,7 +153,8 @@ function calculate_transition_strengths(
     g::State,
     frequency_range::Union{Vector, Nothing} = nothing;
     tol = 0.5,
-    cutoff = 1e-4,
+    use_cutoff = true,
+    cutoff = 1e-3,
 )
     closest = find_closest_eigenstate(spectrum, g; tol=tol)
     E_g, g_vec = closest.energy, closest.eigenstate
@@ -180,8 +182,15 @@ function calculate_transition_strengths(
         [:d_plus, :d_0, :d_minus] => get_strengths => [:transition_strength]
     )
 
+    if use_cutoff
+        DataFrames.filter!(
+            :transition_strength => ts -> ts > cutoff,
+            df
+        )
+    end
+
     DataFrames.filter!(
-        :transition_strength => ts -> ts > cutoff,
+        :transition_frequency => f -> f > 0,
         df
     )
     DataFrames.sort!(df, DataFrames.order(:transition_strength, rev=true))
@@ -194,10 +203,10 @@ function plot_transition_strengths(
     g::State,
     frequency_range::Union{Vector, Nothing} = nothing;
     tol = 0.5,
-    cutoff = 1e-4,
+    use_cutoff = true,
+    cutoff = 1e-3,
 )
-    df = calculate_transition_strengths(spectrum, hamiltonian_parts, g, frequency_range; tol=tol, cutoff=cutoff)
-    DataFrames.filter!(:transition_frequency => f -> f > 0, df)
+    df = calculate_transition_strengths(spectrum, hamiltonian_parts, g, frequency_range; tol=tol, use_cutoff=use_cutoff, cutoff=cutoff)
 
     f = Figure(fontsize=18)
     ax = Axis(
@@ -208,6 +217,95 @@ function plot_transition_strengths(
 
     stem!(df.transition_frequency, df.transition_strength)
     ylims!(ax, 0, 1)
+    return f
+end
+
+function calculate_transitions_vs_E(
+    hamiltonian_parts::HamiltonianParts,
+    fields_scan::Vector{ExternalFields},
+    g::State,
+    frequency_range::Union{Vector, Nothing} = nothing;
+    restrict_N = true,
+    tol = 0.5,
+    use_cutoff = false,
+    cutoff = 1e-6,
+)
+    strengths(df) = calculate_transition_strengths(
+        df,
+        hamiltonian_parts,
+        g,
+        frequency_range;
+        tol=tol,
+        use_cutoff=use_cutoff,
+        cutoff=cutoff
+    )
+    add_E(df) = DataFrames.transform(
+        df,
+        :fields => (fs -> map(f -> f.E.magnitude, fs)) => :E
+    )
+    filter_N(df) = DataFrames.filter(
+        :N => n -> n == g.N + 1,
+        df
+    )
+
+    if restrict_N
+        transform = filter_N ∘ add_E ∘ strengths
+    else
+        transform = add_E ∘ strengths
+    end
+
+    spectra = calculate_spectra_vs_fields(hamiltonian_parts, fields_scan, transform)
+    DataFrames.sort!(spectra, [:index, :E])
+
+    return spectra
+end
+
+function plot_transitions_vs_E(
+    hamiltonian_parts::HamiltonianParts,
+    fields_scan::Vector{ExternalFields},
+    g::State,
+    frequency_range::Union{Vector, Nothing} = nothing;
+    tol = 0.5,
+    use_cutoff = false,
+    cutoff = 1e-6,
+)
+    spectra = calculate_transitions_vs_E(hamiltonian_parts, fields_scan, g, frequency_range; tol=tol, use_cutoff=use_cutoff, cutoff=cutoff)
+
+    return plot_transitions_vs_E(spectra)
+end
+
+function plot_transitions_vs_E(spectra)
+    f = Figure(fontsize=18)
+    ax = Axis(
+        f[1,1],
+        backgroundcolor=:gray75,
+        xlabel = "E (V/cm)",
+        ylabel = "Frequency (MHz)"
+    )
+
+    df = DataFrames.groupby(spectra, :index)
+
+    cmap = :deep
+    colorrange = (-4, 0)
+
+    for group in df
+        DataFrames.sort!(group, :E)
+        lines!(
+            group.E,
+            group.transition_frequency,
+            color=log10.(group.transition_strength),
+            colormap=cmap,
+            colorrange=colorrange
+        )
+    end
+
+    Colorbar(
+        f[1,2],
+        limits=colorrange,
+        colormap=cmap,
+        label="log10(strength)"
+    )
+
     return f
 end
 
