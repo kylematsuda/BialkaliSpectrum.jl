@@ -375,6 +375,78 @@ function get_row_by_state(
     return DataFrames.filter(:basis_index => bi -> bi == index, spectrum)
 end
 
+function calculate_induced_dipole_moments(
+    spectrum,
+    hamiltonian_parts::HamiltonianParts,
+)
+    get_field_orientation(f::ExternalFields) = SphericalUnitVector(f.E) |> T⁽¹⁾
+    get_matrix_elements(s) = [calculate_dipole_matrix_element(hamiltonian_parts, s, s, p) for p in -1:1]
+    get_induced_dipole(s, f) = tensor_dot(get_field_orientation(f), get_matrix_elements(s))
+
+    return DataFrames.combine(
+        spectrum,
+        :,
+        [:eigenstate, :fields] => DataFrames.ByRow((e, f) -> get_induced_dipole(e, f)) => :d_ind
+    )
+end
+
+function calculate_induced_dipole_moments_vs_E(
+    hamiltonian_parts::HamiltonianParts,
+    fields_scan::Vector{ExternalFields},
+    hyperfine_manifold::Union{State, Nothing} = nothing
+)
+    get_dipole_moments(df) = calculate_induced_dipole_moments(df, hamiltonian_parts)
+    add_E(df) = DataFrames.transform(
+        df,
+        :fields => (fs -> map(f -> f.E.magnitude, fs)) => :E
+    )
+    
+    if hyperfine_manifold !== nothing
+        check_hyperfine(m_i1, m_i2) = m_i1 == hyperfine_manifold.mᵢ[1] && m_i2 == hyperfine_manifold.mᵢ[2]
+
+        hyperfine_filter(df) = DataFrames.filter(
+            [:m_i1, :m_i2] => (m1, m2) -> check_hyperfine(m1, m2),
+            df
+        )
+
+        transform = add_E ∘ get_dipole_moments ∘ hyperfine_filter
+    else
+        transform = add_E ∘ get_dipole_moments
+    end
+    
+    return calculate_spectra_vs_fields(hamiltonian_parts, fields_scan, transform)
+end
+
+function plot_induced_dipole_vs_E(
+    hamiltonian_parts::HamiltonianParts,
+    fields_scan::Vector{ExternalFields},
+    hyperfine_manifold::Union{State, Nothing} = nothing
+)
+    spectra = calculate_induced_dipole_moments_vs_E(hamiltonian_parts, fields_scan, hyperfine_manifold)
+    return plot_induced_dipole_vs_E(spectra)
+end
+
+function plot_induced_dipole_vs_E(spectra)
+    f = Figure(fontsize=18)
+    ax = Axis(
+        f[1,1],
+        xlabel = "E (V/cm)",
+        ylabel = "Induced dipole / permanent dipole"
+    )
+
+    df = DataFrames.groupby(spectra, :basis_index)
+
+    for group in df
+        DataFrames.sort!(group, :E)
+        lines!(
+            group.E,
+            real.(group.d_ind) 
+        )
+    end
+
+    return f
+end
+
 # function spectrum_to_dataframe(
 #     spectrum::Spectrum;
 #     fields_handler = external_fields -> (B = external_fields.B.magnitude, E = external_fields.E.magnitude)
