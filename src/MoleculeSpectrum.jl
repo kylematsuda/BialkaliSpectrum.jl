@@ -141,7 +141,7 @@ function find_closest_eigenstate(
     out = DataFrames.first(states)
 
     if out.weight < tol
-        @warn "The best overlap with your requested state is lower than `tol`."
+        @warn "The best overlap with your requested state is lower than $tol."
     end
 
     return out
@@ -438,11 +438,113 @@ function plot_induced_dipole_vs_E(spectra)
 
     for group in df
         DataFrames.sort!(group, :E)
+
+        N = first(group.N)
+        m_n = first(group.m_n)
+
         lines!(
             group.E,
-            real.(group.d_ind) 
+            real.(group.d_ind),
+            label = "$N, $m_n"
         )
     end
+
+    f[1,2] = Legend(
+        f,
+        ax,
+        "States",
+        framevisible = true
+    )
+
+    return f
+end
+
+function calculate_chi_vs_E(
+    hamiltonian_parts::HamiltonianParts,
+    fields_scan::Vector{ExternalFields},
+    g::State;
+    p = 0,
+    tol = 0.5
+)
+    @assert p == 0 || p == -1 || p == 1
+
+    spectra_with_induced = calculate_induced_dipole_moments_vs_E(
+        hamiltonian_parts,
+        fields_scan,
+        g
+    )
+
+    grouped_by_E = DataFrames.groupby(spectra_with_induced, :E)
+
+    output = DataFrames.DataFrame()
+    for spectrum in grouped_by_E
+        gs = find_closest_eigenstate(spectrum, g; tol=tol)
+        d_g = gs.d_ind
+        spectrum = DataFrames.combine(spectrum, :, :d_ind => (x -> d_g) => :d_g)
+
+        strengths = calculate_transition_strengths(
+            spectrum,
+            hamiltonian_parts,
+            g;
+            restrict_N = false,
+            use_cutoff = false,
+            tol = tol
+        )
+
+        # Keep only states that are connected by d^p
+        DataFrames.filter!(:m_n => m -> m == g.mₙ + p, strengths)
+        output = DataFrames.vcat(output, strengths)
+    end
+
+    dipole_factor = 0
+    if p == 0
+        col = :d_0
+        dipole_factor = 2
+    else
+        dipole_factor = -1
+        if p == -1
+            col = :d_minus
+        else
+            col = :d_plus
+        end
+    end
+    chi(μ_0, μ_1, μ_01) = -(μ_0 - μ_1)^2 + dipole_factor * μ_01^2
+
+    return DataFrames.combine(
+        output,
+        :,
+        [:d_g, :d_ind, col] => DataFrames.ByRow(chi) => :chi
+    )
+end
+
+function plot_chi_vs_E(spectra)
+    f = Figure(fontsize=18)
+    ax = Axis(
+        f[1,1],
+        xlabel = "E (V/cm)",
+        ylabel = L"$\chi / d_p^2$"
+    )
+
+    df = DataFrames.groupby(spectra, :basis_index)
+
+    for group in df
+        DataFrames.sort!(group, :E)
+        N = first(group.N)
+        m_n = first(group.m_n)
+
+        lines!(
+            group.E,
+            real.(group.chi),
+            label = "$N, $m_n",
+        )
+    end
+
+    f[1,2] = Legend(
+        f,
+        ax,
+        "States",
+        framevisible = true
+    )
 
     return f
 end
