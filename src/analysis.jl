@@ -1,4 +1,20 @@
-function calculate_transition_strengths(
+function transform_spectra(
+    spectra,
+    f;
+    groupby = :fields
+)
+    output = DataFrames.DataFrame()
+    grouped = DataFrames.groupby(spectra, groupby)
+
+    for spectrum in grouped
+        transformed = f(spectrum)
+        output = DataFrames.vcat(output, transformed)
+    end
+
+    return output
+end
+
+function _calculate_transition_strengths(
     spectrum,
     hamiltonian_parts::HamiltonianParts,
     g::State,
@@ -57,6 +73,29 @@ function calculate_transition_strengths(
     return df
 end
 
+function calculate_transition_strengths(
+    spectra,
+    hamiltonian_parts::HamiltonianParts,
+    g::State,
+    frequency_range::Union{Vector, Nothing} = nothing;
+    tol = 0.5,
+    restrict_N = true,
+    use_cutoff = true,
+    cutoff = 1e-3,
+)
+    f(spectrum) = _calculate_transition_strengths(
+        spectrum,
+        hamiltonian_parts,
+        g,
+        frequency_range;
+        tol=tol,
+        restrict_N=restrict_N,
+        use_cutoff=use_cutoff,
+        cutoff=cutoff
+    )
+    return transform_spectra(spectra, f)
+end
+
 function calculate_transitions_vs_E(
     hamiltonian_parts::HamiltonianParts,
     fields_scan::Vector{ExternalFields},
@@ -106,6 +145,24 @@ function calculate_dipole_matrix_element(
 end
 
 function calculate_induced_dipole_moments(
+    spectra,
+    hamiltonian_parts::HamiltonianParts,
+)
+    output = DataFrames.DataFrame()
+    grouped_by_fields = DataFrames.groupby(spectra, :fields)
+
+    for spectrum in grouped_by_fields
+        induced = _calculate_induced_dipole_moments(
+            spectrum,
+            hamiltonian_parts,
+        )
+        output = DataFrames.vcat(output, induced)
+    end
+
+    return output
+end
+
+function _calculate_induced_dipole_moments(
     spectrum,
     hamiltonian_parts::HamiltonianParts,
 )
