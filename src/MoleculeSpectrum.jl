@@ -82,6 +82,11 @@ This is a utility function to simplify outputting to a `DataFrame`.
 """
 state_to_named_tuple(s::State) = (N = s.N, m_n = s.mₙ, I_1 = s.I[1], m_i1 = s.mᵢ[1], I_2 = s.I[2], m_i2 = s.mᵢ[2])
 
+function state_to_string(s::State)
+    N, m_n, m_i1, m_i2 = s.N, s.mₙ, s.mᵢ[1], s.mᵢ[2]
+    return "|$N, $m_n, $m_i1, $m_i2⟩"
+end
+
 include("matrix_elements.jl")
 include("hamiltonian.jl")
 include("utility.jl")

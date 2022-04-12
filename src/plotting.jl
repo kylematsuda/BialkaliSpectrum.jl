@@ -154,3 +154,53 @@ function plot_chi_vs_E(spectra)
 
     return f
 end
+
+function plot_states_vs_E(
+    hamiltonian_parts::HamiltonianParts,
+    fields_scan::Vector{ExternalFields},
+    states::Vector{State},
+)
+    Ns = [s.N for s in states]
+    filter_Ns(df) = DataFrames.filter(:N => n -> n in Ns, df)
+
+    addE(df) = DataFrames.transform(df, :fields => (f -> map(g -> g.E.magnitude, f)) => :E)
+
+    spectra = calculate_spectra_vs_fields(
+        hamiltonian_parts,
+        fields_scan,
+        addE ∘ filter_Ns
+    )
+    return plot_states_vs_E(spectra, states)
+end
+
+function plot_states_vs_E(spectra, states)
+    f = Figure(fontsize=18, resolution=(800, 600))
+    ax = Axis(
+        f[1,1],
+        xlabel = "E (V/cm)",
+        ylabel = "Frequency (MHz)"
+    )
+
+    cmap = :deep
+    colorrange = (-0.05, 1)
+
+    max_weight(ei) = maximum([abs2.(ei)[state_to_index(s)] for s in states])
+    df = DataFrames.transform(
+        spectra,
+        :eigenstate => (e -> map(max_weight, e)) => :max_weight
+    )
+
+    for group in DataFrames.groupby(df, :index; sort=true)
+        DataFrames.sort!(group, :E)
+        lines!(
+            group.E,
+            group.energy,
+            color=group.max_weight,
+            colormap=cmap,
+            colorrange=colorrange,
+            transparency=true
+        )
+    end
+
+    return f
+end
