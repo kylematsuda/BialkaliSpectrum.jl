@@ -158,7 +158,8 @@ end
 function plot_states_vs_E(
     hamiltonian_parts::HamiltonianParts,
     fields_scan::Vector{ExternalFields},
-    states::Vector{State},
+    states::Vector{State};
+    redraw_threshold = 0.2
 )
     Ns = [s.N for s in states]
     filter_Ns(df) = DataFrames.filter(:N => n -> n in Ns, df)
@@ -170,10 +171,14 @@ function plot_states_vs_E(
         fields_scan,
         addE ∘ filter_Ns
     )
-    return plot_states_vs_E(spectra, states)
+    return plot_states_vs_E(spectra, states; redraw_threshold=redraw_threshold)
 end
 
-function plot_states_vs_E(spectra, states)
+function plot_states_vs_E(
+    spectra,
+    states;
+    redraw_threshold = 0.2
+)
     f = Figure(fontsize=18, resolution=(800, 600))
     ax = Axis(
         f[1,1],
@@ -190,15 +195,39 @@ function plot_states_vs_E(spectra, states)
         :eigenstate => (e -> map(max_weight, e)) => :max_weight
     )
 
-    for group in DataFrames.groupby(df, :index; sort=true)
+    grouped = DataFrames.groupby(df, :index)
+    redraw = []
+    for (i, group) in enumerate(grouped)
         DataFrames.sort!(group, :E)
+
+        if maximum(group.max_weight) > redraw_threshold
+            append!(redraw, i)
+        end
+
         lines!(
             group.E,
             group.energy,
             color=group.max_weight,
             colormap=cmap,
             colorrange=colorrange,
-            transparency=true
+            transparency=false,
+            overdraw=false
+        )
+    end
+
+    println("poop")
+
+    for i in redraw
+        group = grouped[i]
+        lines!(
+            group.E,
+            group.energy,
+            color=group.max_weight,
+            colormap=cmap,
+            colorrange=colorrange,
+            transparency=false,
+            overdraw=true,
+            fxaa=true
         )
     end
 
