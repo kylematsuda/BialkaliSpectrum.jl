@@ -5,6 +5,7 @@ import HalfIntegers: HalfInt
 # import Gadfly
 using CairoMakie
 import DataFrames
+import ProgressMeter
 using LinearAlgebra, SparseArrays, StaticArrays, Test
 
 export ZeemanParameters, NuclearParameters, Polarizability, MolecularParameters
@@ -168,17 +169,14 @@ function calculate_spectra_vs_fields(
     fields_scan::Vector{ExternalFields},
     df_transform::Union{Function, Nothing} = nothing
 )
-    n_pts = length(fields_scan)
-
     out = DataFrames.DataFrame()
-    for (i, field) in enumerate(fields_scan)
+    ProgressMeter.@showprogress for field in fields_scan
         df = calculate_spectrum(hamiltonian_parts, field)
 
         if df_transform !== nothing
             df = df_transform(df)
         end
         out = DataFrames.vcat(out, df, cols = :orderequal)
-        println(i, " of ", n_pts, " complete")
     end
     
     return out
