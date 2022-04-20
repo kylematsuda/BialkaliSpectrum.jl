@@ -18,7 +18,8 @@ export T⁽¹⁾, T⁽²⁾, get_tensor_component, tensor_dot
 export ExternalFields, DEFAULT_FIELDS, TEST_FIELDS, generate_fields_scan
 
 export State, KRbState, index_to_state, state_to_index
-export order_by_overlap_with, max_overlap_with, find_closest_basis_state, decompose_to_basis_states
+export order_by_overlap_with,
+    max_overlap_with, find_closest_basis_state, decompose_to_basis_states
 export get_energy, get_energy_difference, get_row_by_state
 
 export HamiltonianParts, make_hamiltonian_parts, hamiltonian, make_krb_hamiltonian_parts
@@ -84,15 +85,17 @@ function calculate_spectrum(
 )
     h = hamiltonian(hamiltonian_parts, external_fields)
     es = eigen(h)
-    states = [c for c = eachcol(es.vectors)]
-    df = DataFrames.DataFrame(fields = external_fields, index = 1:length(es.values), energy = es.values, eigenstate = states)
+    states = [c for c in eachcol(es.vectors)]
+    df = DataFrames.DataFrame(
+        fields = external_fields,
+        index = 1:length(es.values),
+        energy = es.values,
+        eigenstate = states,
+    )
 
     closest_basis_states = map(
         s -> (basis_index = state_to_index(s), state_to_named_tuple(s)...),
-        map(
-            s -> find_closest_basis_state(hamiltonian_parts, s).state,
-            states
-        )
+        map(s -> find_closest_basis_state(hamiltonian_parts, s).state, states),
     )
     basis_states = DataFrames.DataFrame(closest_basis_states)
 
@@ -121,7 +124,7 @@ See also [`make_hamiltonian_parts`](@ref), [`make_krb_hamiltonian_parts`](@ref),
 function calculate_spectra_vs_fields(
     hamiltonian_parts::HamiltonianParts,
     fields_scan::Vector{ExternalFields},
-    df_transform::Union{Function, Nothing} = nothing
+    df_transform::Union{Function,Nothing} = nothing,
 )
     out = DataFrames.DataFrame()
     ProgressMeter.@showprogress for field in fields_scan
@@ -132,7 +135,7 @@ function calculate_spectra_vs_fields(
         end
         out = DataFrames.vcat(out, df, cols = :orderequal)
     end
-    
+
     return out
 end
 

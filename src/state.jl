@@ -16,7 +16,8 @@ end
 Creates a basis state ``|N, mₙ, I₁, mᵢ₁, I₂, mᵢ₂⟩``.
 
 """
-State(N, mₙ, I₁, mᵢ₁, I₂, mᵢ₂) = State(N, mₙ, SVector(HalfInt(I₁), HalfInt(I₂)), SVector(HalfInt(mᵢ₁), HalfInt(mᵢ₂)))
+State(N, mₙ, I₁, mᵢ₁, I₂, mᵢ₂) =
+    State(N, mₙ, SVector(HalfInt(I₁), HalfInt(I₂)), SVector(HalfInt(mᵢ₁), HalfInt(mᵢ₂)))
 
 """
     KRbState(N, mₙ, mK, mRb)
@@ -37,7 +38,8 @@ Creates a named tuple with fields `N`, `m_n`, `I_1`, `m_i1`, `I_2`, `m_i2` from 
 
 This is a utility function to simplify outputting to a `DataFrame`.
 """
-state_to_named_tuple(s::State) = (N = s.N, m_n = s.mₙ, I_1 = s.I[1], m_i1 = s.mᵢ[1], I_2 = s.I[2], m_i2 = s.mᵢ[2])
+state_to_named_tuple(s::State) =
+    (N = s.N, m_n = s.mₙ, I_1 = s.I[1], m_i1 = s.mᵢ[1], I_2 = s.I[2], m_i2 = s.mᵢ[2])
 
 """
     state_to_string(s::State)
