@@ -3,12 +3,13 @@ CurrentModule = MoleculeSpectrum
 ```
 
 # State
-
 ```@index
 Pages = ["state.md"]
 ```
 
-## Blah blah write some words
+## Description
+
+Blah
 
 ## Types
 ```@autodocs

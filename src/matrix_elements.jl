@@ -1,9 +1,30 @@
+"""
+    δ(i, j)
+    δ(i::State, j::State)
+
+Returns the Kronecker δ between `i` and `j`.
+
+Uses `==(i,j)` if possible. If `i` and `j` are both [`State`](@ref),
+then this function computes the product of the Kronecker δs over all
+quantum numbers.
+"""
 δ(i, j) = ==(i, j)
 δ(i::State, j::State) = δ(i.N, j.N) * δ(i.mₙ, j.mₙ) * δ(i.I, j.I) * δ(i.mᵢ, j.mᵢ)
 
-# Same as WignerSymbols.wigner3j(j, 1, j, -m, 0, m)
+"""
+    WignerJ1J(j, m)
+    
+Returns the same as `WignerSymbols.wigner3j(j, 1, j, -m, 0, m)`,
+but computes it directly from the explicit formula.
+"""
 WignerJ1J(j, m) = (-1)^(j - m) * m / sqrt(j * (j + 1) * (2j + 1))
-# Same as WignerSymbols.wigner3j(j, 2, j, -m, 0, m)
+
+"""
+    WignerJ2J(j, m)
+    
+Returns the same as `WignerSymbols.wigner3j(j, 2, j, -m, 0, m)`,
+but computes it directly from the explicit formula.
+"""
 WignerJ2J(j, m) =
     (-1)^(j - m) * 2 * (3m^2 - j * (j + 1)) /
     sqrt((2j - 1) * (2j) * (2j + 1) * (2j + 2) * (2j + 3))
@@ -53,8 +74,14 @@ function T⁽¹⁾Iₖ(p::Int, k::Int, bra::State, ket::State)::ComplexF64
     end
 end
 
+"""
+    rotation_matrix_element(bra::State, ket::State)::Float64
+"""
 rotation_matrix_element(bra::State, ket::State)::Float64 = ket.N * (ket.N + 1) * δ(bra, ket)
 
+"""
+    dipole_matrix_element(p::Int, bra::State, ket::State)::ComplexF64
+"""
 function dipole_matrix_element(p::Int, bra::State, ket::State)::ComplexF64
     N, mₙ, mᵢ = bra.N, bra.mₙ, bra.mᵢ
     N′, mₙ′, mᵢ′ = ket.N, ket.mₙ, ket.mᵢ
@@ -69,6 +96,9 @@ function dipole_matrix_element(p::Int, bra::State, ket::State)::ComplexF64
     end
 end
 
+"""
+    nuclear_quadrupole(k::Int, bra::State, ket::State)::ComplexF64
+"""
 function nuclear_quadrupole(k::Int, bra::State, ket::State)::ComplexF64
     N, mₙ, I, mᵢ = bra.N, bra.mₙ, bra.I[k], bra.mᵢ[k]
     N′, mₙ′, I′, mᵢ′ = ket.N, ket.mₙ, ket.I[k], ket.mᵢ[k]
@@ -97,6 +127,9 @@ function nuclear_quadrupole(k::Int, bra::State, ket::State)::ComplexF64
     end
 end
 
+"""
+    nuclear_spin_spin(bra::State, ket::State)::ComplexF64
+"""
 function nuclear_spin_spin(bra::State, ket::State)::ComplexF64
     if δ(bra.N, ket.N) &&
        δ(bra.mₙ, ket.mₙ) &&
@@ -110,6 +143,9 @@ function nuclear_spin_spin(bra::State, ket::State)::ComplexF64
     end
 end
 
+"""
+    nuclear_spin_rotation(k::Int, bra::State, ket::State)::ComplexF64
+"""
 function nuclear_spin_rotation(k::Int, bra::State, ket::State)::ComplexF64
     other = (k % 2) + 1 # States of other nucleus should Kronecker delta
     other_nucleus = δ(bra.I[other], ket.I[other]) * δ(bra.mᵢ[other], ket.mᵢ[other])
@@ -124,6 +160,9 @@ function nuclear_spin_rotation(k::Int, bra::State, ket::State)::ComplexF64
     end
 end
 
+"""
+    zeeman_rotation(p::Int, bra::State, ket::State)::ComplexF64
+"""
 function zeeman_rotation(p::Int, bra::State, ket::State)::ComplexF64
     if δ(bra.I, ket.I) && δ(bra.mᵢ, ket.mᵢ)
         return T⁽¹⁾N(p, bra, ket)
@@ -132,6 +171,9 @@ function zeeman_rotation(p::Int, bra::State, ket::State)::ComplexF64
     end
 end
 
+"""
+    zeeman_nuclear(k::Int, p::Int, bra::State, ket::State)::ComplexF64
+"""
 function zeeman_nuclear(k::Int, p::Int, bra::State, ket::State)::ComplexF64
     other = 1 + (k % 2)
     rotation = δ(bra.N, ket.N) && δ(bra.mₙ, ket.mₙ)
@@ -144,8 +186,14 @@ function zeeman_nuclear(k::Int, p::Int, bra::State, ket::State)::ComplexF64
     end
 end
 
+"""
+    scalar_polarizability(bra::State, ket::State)
+"""
 scalar_polarizability(bra::State, ket::State) = δ(bra, ket)
 
+"""
+    tensor_polarizability(p::Int, bra::State, ket::State)
+"""
 function tensor_polarizability(p::Int, bra::State, ket::State)
     deltas = δ(bra.N, ket.N) * δ(bra.I, ket.I) * δ(bra.mᵢ, ket.mᵢ)
     N, mₙ = bra.N, bra.mₙ
