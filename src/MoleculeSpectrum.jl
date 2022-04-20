@@ -32,6 +32,8 @@ export filter_rotational, filter_rotational!, filter_hyperfine, filter_hyperfine
     filter_by_state, filter_by_state!
 export expand_fields!, find_closest_eigenstate
 
+export get_induced_dipole_moments
+
 module Constants
 "Nuclear magneton in MHz/G\n"
 const μN = 7.622593285e-4
@@ -107,6 +109,54 @@ function calculate_spectrum(
 end
 
 """
+    find_closest_eigenstate(spectrum, basis_state::State; tol=0.5)
+
+Find the row in `spectrum` whose `:eigenstate` has the highest overlap with `basis_state`.
+
+Example!!!
+"""
+function find_closest_eigenstate(spectrum, basis_state::State; tol=0.5)
+    state_index = state_to_index(basis_state)
+    get_weight(e) = abs2(e[state_index])
+
+    states =
+        DataFrames.transform(spectrum, :eigenstate => (e -> map(get_weight, e)) => :weight)
+    DataFrames.sort!(states, DataFrames.order(:weight, rev=true))
+    out = DataFrames.first(states)
+
+    if out.weight < tol
+        @warn "The best overlap with your requested state is lower than $tol."
+    end
+
+    return out
+end
+
+"""
+    get_energy(spectrum, basis_state::State; tol = 0.5)
+
+Find the row in `spectrum` whose `:eigenstate` has the highest overlap with `basis_state`.
+
+Example!!!
+"""
+function get_energy(spectrum, basis_state::State; tol = 0.5)
+    closest = find_closest_eigenstate(spectrum, basis_state; tol = tol)
+    return closest.energy
+end
+
+"""
+    get_energy_difference(spectrum, basis_g::State, basis_e::State; tol = 0.5)
+
+Find the row in `spectrum` whose `:eigenstate` has the highest overlap with `basis_state`.
+
+Example!!!
+"""
+function get_energy_difference(spectrum, basis_g::State, basis_e::State; tol = 0.5)
+    return find_closest_eigenstate(spectrum, basis_e; tol = tol).energy -
+           find_closest_eigenstate(spectrum, basis_g; tol = tol).energy
+end
+
+
+"""
     calculate_spectra_vs_fields(hamiltonian_parts, fields_scan, df_transform)
 
 Compute the energies and eigenstates at each point in `fields_scan`, applying
@@ -160,7 +210,7 @@ function transform_spectra(spectra, f; groupby=:fields)
 
     for spectrum in grouped
         transformed = f(spectrum)
-        output = DataFrames.vcat(output, transformed)
+        DataFrames.append!(output, transformed)
     end
 
     return output

@@ -107,25 +107,3 @@ function expand_fields!(df; magnitude_only=true)
     return expand_fields!(df, fields_names, expander)
 end
 
-"""
-    find_closest_eigenstate(spectrum, basis_state::State; tol=0.5)
-
-Find the row in `spectrum` whose `:eigenstate` has the highest overlap with `basis_state`.
-
-Example!!!
-"""
-function find_closest_eigenstate(spectrum, basis_state::State; tol=0.5)
-    state_index = state_to_index(basis_state)
-    get_weight(e) = abs2(e[state_index])
-
-    states =
-        DataFrames.transform(spectrum, :eigenstate => (e -> map(get_weight, e)) => :weight)
-    DataFrames.sort!(states, DataFrames.order(:weight, rev = true))
-    out = DataFrames.first(states)
-
-    if out.weight < tol
-        @warn "The best overlap with your requested state is lower than $tol."
-    end
-
-    return out
-end
