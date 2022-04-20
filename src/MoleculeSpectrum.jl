@@ -15,7 +15,8 @@ export KRb_Parameters_Neyenhuis,
 export SphericalVector, VectorX, VectorY, VectorZ
 export ExternalFields, DEFAULT_FIELDS, TEST_FIELDS, generate_fields_scan
 
-export State, KRbState, index_to_state, state_to_index, find_closest_basis_state 
+export State, KRbState, index_to_state, state_to_index, find_closest_basis_state
+export state_to_named_tuple, state_to_string
 
 export HamiltonianParts, make_hamiltonian_parts, hamiltonian, make_krb_hamiltonian_parts
 
