@@ -20,18 +20,6 @@ State(N, mₙ, I₁, mᵢ₁, I₂, mᵢ₂) =
     State(N, mₙ, SVector(HalfInt(I₁), HalfInt(I₂)), SVector(HalfInt(mᵢ₁), HalfInt(mᵢ₂)))
 
 """
-    KRbState(N, mₙ, mK, mRb)
-
-Creates a basis state ``|N, m_n, m_{\\text{K}}, m_{\\text{Rb}}⟩`` for ``{}^{40}\\text{K}^{87}\\text{Rb}``.
-
-This is a wrapper around [`State`](@ref) to avoid having to specify the nuclear spins ``I_k`` each time.
-
-See also [`State`](@ref).
-"""
-KRbState(N, mₙ, mK, mRb) =
-    State(N, mₙ, KRb_Parameters_Neyenhuis.I, [HalfInt(mK) HalfInt(mRb)])
-
-"""
     Base.convert(t::Type{NamedTuple}, s::State)
 
 Returns a named tuple with fields `N`, `m_n`, `I_1`, `m_i1`, `I_2`, `m_i2` from `s`.

@@ -13,6 +13,7 @@ Depth = 2
 ```@contents
 Pages = ["api/state.md",
     "api/molecular_parameters.md",
+    "api/molecule_specific.md",
     "api/hamiltonian.md",
     "api/fields.md",
     "api/spectrum.md",

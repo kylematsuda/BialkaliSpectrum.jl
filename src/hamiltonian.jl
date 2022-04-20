@@ -198,21 +198,6 @@ function make_hamiltonian_parts(
 end
 
 """
-    make_krb_hamiltonian_parts(N_max)
-
-Construct all parts of the ``{}^{40}\\text{K}^{87}\\text{Rb}`` Hamiltonian
-that do not depend on external fields.
-
-The rotational states `0:N_max` are included. This is a shortcut method that
-replaces `make_hamiltonian_parts` for KRb.
-
-See also [`make_hamiltonian_parts`](@ref).
-"""
-function make_krb_hamiltonian_parts(N_max::Int)
-    return make_hamiltonian_parts(KRb_Parameters_Neyenhuis, N_max)
-end
-
-"""
     hamiltonian(parts, external_fields)
 
 Construct the full Hamiltonian including magnetic, electric, and optical fields.
