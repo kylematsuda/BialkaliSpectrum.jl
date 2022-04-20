@@ -2,7 +2,7 @@
 CurrentModule = MoleculeSpectrum
 ```
 
-# Analyzing the spectrum
+# Analyzing the results
 
 ## Contents
 
@@ -62,7 +62,7 @@ Private = false
 Order = [:function]
 ```
 
-## Analysis
+## Extracting physical quantities
 
 Functions for analyzing the output of [`get_spectrum`](@ref) or
 [`get_spectra`](@ref).

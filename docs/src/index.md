@@ -14,7 +14,6 @@ Depth = 2
 Pages = [
     "api/setting_up.md",
     "api/analyzing_spectrum.md",
-    "api/analysis.md",
 ]
 Depth = 3
 ```

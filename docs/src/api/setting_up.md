@@ -2,7 +2,7 @@
 CurrentModule = MoleculeSpectrum
 ```
 
-# Setting up the calculation
+# Setting up a calculation
 
 ## Contents
 
