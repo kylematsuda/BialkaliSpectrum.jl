@@ -133,7 +133,7 @@ function calculate_spectra_vs_fields(
         if df_transform !== nothing
             df = df_transform(df)
         end
-        out = DataFrames.vcat(out, df, cols = :orderequal)
+        DataFrames.append!(out, df)
     end
 
     return out
