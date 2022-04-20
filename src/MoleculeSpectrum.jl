@@ -1,13 +1,13 @@
 module MoleculeSpectrum
 
+using LinearAlgebra, SparseArrays, StaticArrays, Test
 import WignerSymbols: wigner3j
 import HalfIntegers: HalfInt
-using CairoMakie
 import DataFrames
 import ProgressMeter
-using LinearAlgebra, SparseArrays, StaticArrays, Test
+using CairoMakie
 
-# export ZeemanParameters, NuclearParameters, Polarizability, MolecularParameters
+export ZeemanParameters, NuclearParameters, Polarizability, MolecularParameters
 export KRb_Zeeman, KRb_Nuclear_Neyenhuis, KRb_Nuclear_Ospelkaus, KRb_Polarizability
 export KRb_Parameters_Neyenhuis,
     KRb_Parameters_Ospelkaus, DEFAULT_MOLECULAR_PARAMETERS, TOY_MOLECULE_PARAMETERS
