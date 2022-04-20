@@ -4,6 +4,10 @@ import HalfIntegers: HalfInt
 import ..MoleculeSpectrum: ZeemanParameters, Polarizability, NuclearParameters,
     MolecularParameters, make_hamiltonian_parts, State
 
+export KRb_Zeeman, KRb_Nuclear_Neyenhuis, KRb_Nuclear_Ospelkaus, KRb_Polarizability
+export KRb_Parameters_Neyenhuis, KRb_Parameters_Ospelkaus
+export KRbState, make_krb_hamiltonian_parts
+
 """
     KRb_Zeeman
 
