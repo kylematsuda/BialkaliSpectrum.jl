@@ -8,8 +8,8 @@ CurrentModule = MoleculeSpectrum
 Pages = ["analysis.md"]
 ```
 
-Functions for analyzing the output of [`calculate_spectrum`](@ref) or
-[`calculate_spectra_vs_fields`](@ref).
+Functions for analyzing the output of [`get_spectrum`](@ref) or
+[`get_spectra`](@ref).
 
 ## Methods
 ```@autodocs

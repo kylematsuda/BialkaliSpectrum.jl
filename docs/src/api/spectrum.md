@@ -9,10 +9,10 @@ Pages = ["spectrum.md"]
 
 ## Methods
 ```@docs
-calculate_spectrum
+get_spectrum
 find_closest_eigenstate
 get_energy
 get_energy_difference
-calculate_spectra_vs_fields
+get_spectra
 transform_spectra
 ```

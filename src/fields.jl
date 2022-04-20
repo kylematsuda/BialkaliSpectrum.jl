@@ -294,7 +294,7 @@ External magnetic, electric, optical fields to use in constructing the Hamiltoni
 If `B` and `E` are provided as `Float64`s, then the fields are assumed to be along `z`.
 The `Optical` argument can also be left as an empty vector `[]`.
 
-See also [`calculate_spectrum`](@ref), [`hamiltonian`](@ref), [`SphericalVector`](@ref).
+See also [`get_spectrum`](@ref), [`hamiltonian`](@ref), [`SphericalVector`](@ref).
 
 TODO: add the other signatures
 

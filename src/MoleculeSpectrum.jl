@@ -16,7 +16,7 @@ export State, basis_state, basis_index, closest_basis_state
 
 export HamiltonianParts, make_hamiltonian_parts, hamiltonian
 
-export calculate_spectrum, calculate_spectra_vs_fields
+export get_spectrum, get_spectra
 export find_closest_eigenstate, get_energy, get_energy_difference
 
 export filter_rotational, filter_rotational!, filter_hyperfine, filter_hyperfine!,
@@ -48,7 +48,7 @@ include("hamiltonian.jl")
 include("dataframe.jl")
 
 """
-    calculate_spectrum(
+    get_spectrum(
         hamiltonian_parts::HamiltonianParts,
         external_fields::ExternalFields,
     )
@@ -56,7 +56,7 @@ include("dataframe.jl")
 Compute the energies and eigenstates under the external fields.
 
 To avoid reconstructing the Hamiltonian each time, `hamiltonian_parts` can be reused over calls
-to `calculate_spectrum`. The output is a `DataFrame`, with the following fields:
+to `get_spectrum`. The output is a `DataFrame`, with the following fields:
 
 `fields`:       value of `external_fields`
 
@@ -84,9 +84,10 @@ to `calculate_spectrum`. The output is a `DataFrame`, with the following fields:
 
 `m_i2`:         nuclear projection `m_i2` of the nearest basis state
 
-See also [`make_hamiltonian_parts`](@ref), [`make_krb_hamiltonian_parts`](@ref), [`ExternalFields`](@ref).
+See also [`get_spectra`](@ref), [`make_hamiltonian_parts`](@ref),
+[`make_krb_hamiltonian_parts`](@ref), [`ExternalFields`](@ref).
 """
-function calculate_spectrum(
+function get_spectrum(
     hamiltonian_parts::HamiltonianParts,
     external_fields::ExternalFields,
 )
@@ -160,7 +161,7 @@ end
 
 
 """
-    calculate_spectra_vs_fields(hamiltonian_parts, fields_scan, df_transform)
+    get_spectra(hamiltonian_parts, fields_scan, df_transform)
 
 Compute the energies and eigenstates at each point in `fields_scan`, applying
 `df_transform` to each intermediate spectrum.
@@ -170,22 +171,22 @@ The closure `df_transform`, which must have the signature `DataFrame -> DataFram
 can be used to filter away unneeded rows (typically large `N` states), or to do further
 analysis.
 
-Internally, this method calls [`calculate_spectrum`](@ref) for each point in `fields_scan`,
+Internally, this method calls [`get_spectrum`](@ref) for each point in `fields_scan`,
 calls `df_transform` on each point (if provided), and vertically concatenates the results.
-The output is a `DataFrame`, see [`calculate_spectrum`](@ref) for details
+The output is a `DataFrame`, see [`get_spectrum`](@ref) for details
 on the dataframe columns.
 
 See also [`make_hamiltonian_parts`](@ref), [`make_krb_hamiltonian_parts`](@ref),
-[`generate_fields_scan`](@ref), [`calculate_spectrum`](@ref).
+[`generate_fields_scan`](@ref), [`get_spectrum`](@ref).
 """
-function calculate_spectra_vs_fields(
+function get_spectra(
     hamiltonian_parts::HamiltonianParts,
     fields_scan::Vector{ExternalFields},
     df_transform::Union{Function,Nothing} = nothing,
 )
     out = DataFrames.DataFrame()
     ProgressMeter.@showprogress for field in fields_scan
-        df = calculate_spectrum(hamiltonian_parts, field)
+        df = get_spectrum(hamiltonian_parts, field)
 
         if df_transform !== nothing
             df = df_transform(df)
@@ -199,7 +200,7 @@ end
 """
     transform_spectra(spectra, f; groupby=:fields)
 
-A generic function for transforming the output of [`calculate_spectra_vs_fields`](@ref).
+A generic function for transforming the output of [`get_spectra`](@ref).
 
 Returns the result of grouping `spectra` by `groupby` and applying `f` to each group,
 then combining the results into a new `DataFrame`. The signature of `f` must be

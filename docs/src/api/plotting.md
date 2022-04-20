@@ -7,8 +7,8 @@ CurrentModule = MoleculeSpectrum
 Pages = ["plotting.md"]
 ```
 
-Methods for plotting data from [`calculate_spectrum`](@ref) and
-[`calculate_spectra_vs_fields`](@ref) using
+Methods for plotting data from [`get_spectrum`](@ref) and
+[`get_spectra`](@ref) using
 [`CairoMakie`](https://makie.juliaplots.org/stable/documentation/backends/cairomakie/).
 
 In a REPL session, entering `using ElectronDisplay` will plot the figures in a

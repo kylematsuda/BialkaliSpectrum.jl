@@ -8,8 +8,8 @@ CurrentModule = MoleculeSpectrum
 Pages = ["dataframe.md"]
 ```
 
-Utilities for working with the output of [`calculate_spectrum`](@ref) and
-[`calculate_spectra_vs_fields`](@ref), both of which return a `DataFrame`.
+Utilities for working with the output of [`get_spectrum`](@ref) and
+[`get_spectra`](@ref), both of which return a `DataFrame`.
 
 These are mainly simple filters or transforms, defined for convenience.
 Anything more complicated should use the methods in the
