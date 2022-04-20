@@ -76,18 +76,17 @@ end
 function plot_induced_dipole(
     spectra,
     hamiltonian_parts::HamiltonianParts;
-    groupby=:E
+    groupby=:E,
+    adiabatic=true
 )
     return plot_induced_dipole(
-        induced_dipole_moments(spectra,
-            hamiltonian_parts;
-            groupby=groupby
-        );
-        groupby=groupby
+        induced_dipole_moments(spectra, hamiltonian_parts);
+        groupby=groupby,
+        adiabatic=adiabatic
     )
 end
 
-function plot_induced_dipole(spectra; groupby=:fields)
+function plot_induced_dipole(spectra; groupby=:fields, adiabatic=adiabatic)
     f = Figure(fontsize = 18)
 
     if groupby == :E
@@ -99,7 +98,14 @@ function plot_induced_dipole(spectra; groupby=:fields)
     end
 
     ax = Axis(f[1, 1], xlabel=xlabel, ylabel="Induced dipole / permanent dipole")
-    df = DataFrames.groupby(spectra, :basis_index)
+
+    if adiabatic
+        key = :adiabatic_index
+    else
+        key = :index
+    end
+
+    df = DataFrames.groupby(spectra, key)
 
     for group in df
         DataFrames.sort!(group, groupby)

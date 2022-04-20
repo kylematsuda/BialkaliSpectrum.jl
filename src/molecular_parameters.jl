@@ -68,21 +68,3 @@ struct MolecularParameters
     "Molecular polarizability at the trapping wavelength\n"
     α::Polarizability
 end
-
-"""
-    TOY_MOLECULE_PARAMETERS
-
-Toy model values with dipole = 1 D, no hyperfine structure, etc.
-Intended for testing.
-
-Note that the formulas break down for `I = 0`, which is why we use
-`I = 1` here.
-"""
-const TOY_MOLECULE_PARAMETERS = MolecularParameters(
-    1.0,
-    1000.0,
-    [HalfInt(1), HalfInt(1)], # Some of the matrix elements don't make sense for I = 0
-    ZeemanParameters(0.0, [0.0, 0.0], [0.0, 0.0]),
-    NuclearParameters([0.0, 0.0], [0.0, 0.0], 0.0),
-    Polarizability(0.0, 0.0),
-)

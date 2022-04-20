@@ -7,7 +7,7 @@ import DataFrames
 import ProgressMeter
 using CairoMakie
 
-export ZeemanParameters, NuclearParameters, Polarizability, MolecularParameters, TOY_MOLECULE_PARAMETERS
+export ZeemanParameters, NuclearParameters, Polarizability, MolecularParameters
 
 export SphericalVector, VectorX, VectorY, VectorZ
 export ExternalFields, DEFAULT_FIELDS, TEST_FIELDS, generate_fields_scan

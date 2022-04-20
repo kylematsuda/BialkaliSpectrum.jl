@@ -95,3 +95,63 @@ KRbState(N, mₙ, mK, mRb) =
 
 end # module
 using .K40Rb87
+
+module NoHyperfine
+
+import HalfIntegers: HalfInt
+import ..MoleculeSpectrum: ZeemanParameters, Polarizability, NuclearParameters,
+    MolecularParameters, State,
+    generate_basis, SparseHamiltonian, HamiltonianParts,
+    h_rotation, h_dipole,
+    h_diagonal, h_rank_1, h_rank_2
+
+export make_nohyperfine_hamiltonian_parts, NoHyperfineState
+
+"""
+    NOHYPERFINE_PARAMETERS
+
+Toy model values with dipole = 1 D and no hyperfine structure.
+Intended for testing.
+"""
+const NOHYPERFINE_PARAMETERS = MolecularParameters(
+    1.0, # d_p
+    1.0, # B_r
+    [HalfInt(0), HalfInt(0)],
+    ZeemanParameters(0.0, [0.0, 0.0], [0.0, 0.0]),
+    NuclearParameters([0.0, 0.0], [0.0, 0.0], 0.0),
+    Polarizability(0.0, 0.0),
+)
+
+"""
+    make_nohyperfine_hamiltonian_parts(N_max)
+
+Construct all parts of the ``{}^{40}\\text{K}^{87}\\text{Rb}`` Hamiltonian
+that do not depend on external fields.
+
+The rotational states `0:N_max` are included. This is a shortcut method that
+replaces [`make_hamiltonian_parts`](@ref) for KRb.
+
+See also [`make_hamiltonian_parts`](@ref).
+"""
+function make_nohyperfine_hamiltonian_parts(N_max::Int)::HamiltonianParts
+    basis = generate_basis(NOHYPERFINE_PARAMETERS, N_max)
+
+    rotation = NOHYPERFINE_PARAMETERS.Bᵣ * h_rotation(basis)
+    dipole_relative = h_dipole(basis)
+    dipole = (-1) * NOHYPERFINE_PARAMETERS.dₚ * h_dipole(basis)
+
+    return HamiltonianParts(
+        basis,
+        rotation,
+        dipole,
+        dipole_relative,
+        h_diagonal(basis, (_, _) -> 0),
+        h_rank_1(basis, (_, _, _) -> 0),
+        h_diagonal(basis, (_, _) -> 0),
+        h_rank_2(basis, (_, _, _) -> 0),
+    )
+end
+
+NoHyperfineState(N, m_n) = State(N, m_n, [0, 0], [0, 0])
+
+end # module
