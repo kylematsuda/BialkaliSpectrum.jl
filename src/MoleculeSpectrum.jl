@@ -2,7 +2,6 @@ module MoleculeSpectrum
 
 import WignerSymbols: wigner3j
 import HalfIntegers: HalfInt
-# import Gadfly
 using CairoMakie
 import DataFrames
 import ProgressMeter
