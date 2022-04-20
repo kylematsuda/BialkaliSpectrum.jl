@@ -156,7 +156,7 @@ end
 function generate_basis(molecular_parameters::MolecularParameters, N_max::Int)
     n_elts::Int = (N_max + 1)^2 * mapreduce(n_hyperfine, *, molecular_parameters.I)
     return map(
-        k -> index_to_state(k, molecular_parameters.I[1], molecular_parameters.I[2]),
+        k -> basis_state(k, molecular_parameters.I[1], molecular_parameters.I[2]),
         1:n_elts,
     )
 end
@@ -195,21 +195,6 @@ function make_hamiltonian_parts(
         ac_scalar,
         ac_tensor,
     )
-end
-
-"""
-    make_krb_hamiltonian_parts(N_max)
-
-Construct all parts of the ``{}^{40}\\text{K}^{87}\\text{Rb}`` Hamiltonian
-that do not depend on external fields.
-
-The rotational states `0:N_max` are included. This is a shortcut method that
-replaces `make_hamiltonian_parts` for KRb.
-
-See also [`make_hamiltonian_parts`](@ref).
-"""
-function make_krb_hamiltonian_parts(N_max::Int)
-    return make_hamiltonian_parts(KRb_Parameters_Neyenhuis, N_max)
 end
 
 """

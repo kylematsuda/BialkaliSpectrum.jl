@@ -2,16 +2,16 @@
 CurrentModule = MoleculeSpectrum
 ```
 
-# Matrix elements
+# DataFrame
 
 ```@index
-Pages = ["matrix_elements.md"]
+Pages = ["dataframe.md"]
 ```
 
 ## Types
 ```@autodocs
 Modules = [MoleculeSpectrum]
-Pages = ["matrix_elements.jl"]
+Pages = ["dataframe.jl"]
 Private = false
 Order = [:type]
 ```
@@ -19,7 +19,7 @@ Order = [:type]
 ## Methods
 ```@autodocs
 Modules = [MoleculeSpectrum]
-Pages = ["matrix_elements.jl"]
+Pages = ["dataframe.jl"]
 Private = false
 Order = [:function]
 ```

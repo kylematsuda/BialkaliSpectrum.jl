@@ -3,12 +3,13 @@ CurrentModule = MoleculeSpectrum
 ```
 
 # State
-
 ```@index
 Pages = ["state.md"]
 ```
 
-## Blah blah write some words
+## Description
+
+Blah
 
 ## Types
 ```@autodocs
@@ -16,6 +17,12 @@ Modules = [MoleculeSpectrum]
 Pages = ["state.jl"]
 Private = false
 Order = [:type]
+```
+
+## Standard library interfaces
+```@docs
+convert
+show
 ```
 
 ## Methods

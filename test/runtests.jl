@@ -1,5 +1,5 @@
 using LinearAlgebra, SparseArrays, StaticArrays, Test
-using MoleculeSpectrum
+using MoleculeSpectrum, MoleculeSpectrum.K40Rb87
 using DataFrames
 
 const N_max = 5

@@ -7,26 +7,25 @@ import DataFrames
 import ProgressMeter
 using CairoMakie
 
-export ZeemanParameters, NuclearParameters, Polarizability, MolecularParameters
-export KRb_Zeeman, KRb_Nuclear_Neyenhuis, KRb_Nuclear_Ospelkaus, KRb_Polarizability
-export KRb_Parameters_Neyenhuis,
-    KRb_Parameters_Ospelkaus, DEFAULT_MOLECULAR_PARAMETERS, TOY_MOLECULE_PARAMETERS
+export ZeemanParameters, NuclearParameters, Polarizability, MolecularParameters, TOY_MOLECULE_PARAMETERS
 
 export SphericalVector, VectorX, VectorY, VectorZ
-export SphericalUnitVector, UnitVectorX, UnitVectorY, UnitVectorZ, Unpolarized
-export T⁽¹⁾, T⁽²⁾, get_tensor_component, tensor_dot
 export ExternalFields, DEFAULT_FIELDS, TEST_FIELDS, generate_fields_scan
 
-export State, KRbState, index_to_state, state_to_index
-export order_by_overlap_with,
-    max_overlap_with, find_closest_basis_state, decompose_to_basis_states
-export get_energy, get_energy_difference, get_row_by_state
+export State, basis_state, basis_index, closest_basis_state
 
-export HamiltonianParts, make_hamiltonian_parts, hamiltonian, make_krb_hamiltonian_parts
+export HamiltonianParts, make_hamiltonian_parts, hamiltonian
 
 export calculate_spectrum, calculate_spectra_vs_fields
-export calculate_transition_strengths, plot_transition_strengths
-export calculate_transitions_vs_E, plot_transitions_vs_E
+export find_closest_eigenstate, get_energy, get_energy_difference
+
+export filter_rotational, filter_rotational!, filter_hyperfine, filter_hyperfine!,
+    filter_basis_state, filter_basis_state!, expand_fields!
+export wide_format
+
+export induced_dipole_moments, transitions, adiabatic
+export plot_transition_strengths, plot_induced_dipole
+export plot_states_adiabatic, plot_states_adiabatic_weighted, plot_transitions_adiabatic
 
 module Constants
 "Nuclear magneton in MHz/G\n"
@@ -43,19 +42,27 @@ include("molecular_parameters.jl")
 include("fields.jl")
 include("state.jl")
 
-include("utility.jl")
 include("matrix_elements.jl")
 include("hamiltonian.jl")
 
+include("dataframe.jl")
+
 """
-    calculate_spectrum(hamiltonian_parts, external_fields)
+    calculate_spectrum(
+        hamiltonian_parts::HamiltonianParts,
+        external_fields::ExternalFields,
+    )
 
 Compute the energies and eigenstates under the external fields.
 
 To avoid reconstructing the Hamiltonian each time, `hamiltonian_parts` can be reused over calls
-to `calculate_spectrum`. The output is a [`DataFrames.DataFrame`](@ref), with the following fields:
+to `calculate_spectrum`. The output is a `DataFrame`, with the following fields:
 
 `fields`:       value of `external_fields`
+
+`B`:            magnitude of `external_fields.B`
+
+`E`:            magnitude of `external_fields.E`
 
 `index`:        index of the eigenenergy (from lowest to highest energy)
 
@@ -94,13 +101,63 @@ function calculate_spectrum(
     )
 
     closest_basis_states = map(
-        s -> (basis_index = state_to_index(s), state_to_named_tuple(s)...),
-        map(s -> find_closest_basis_state(hamiltonian_parts, s).state, states),
+        s -> (basis_index = basis_index(s), convert(NamedTuple, s)...),
+        map(s -> closest_basis_state(hamiltonian_parts, s).state, states),
     )
     basis_states = DataFrames.DataFrame(closest_basis_states)
 
-    return DataFrames.hcat(df, basis_states)
+    out = DataFrames.hcat(df, basis_states)
+    expand_fields!(out)
+    return out
 end
+
+"""
+    find_closest_eigenstate(spectrum, basis_state::State; tol=0.5)
+
+Find the row in `spectrum` whose `:eigenstate` has the highest overlap with `basis_state`.
+
+Example!!!
+"""
+function find_closest_eigenstate(spectrum, basis_state::State; tol=0.5)
+    state_index = basis_index(basis_state)
+    get_weight(e) = abs2(e[state_index])
+
+    states =
+        DataFrames.transform(spectrum, :eigenstate => (e -> map(get_weight, e)) => :weight)
+    DataFrames.sort!(states, DataFrames.order(:weight, rev=true))
+    out = DataFrames.first(states)
+
+    if out.weight < tol
+        @warn "The best overlap with your requested state is lower than $tol."
+    end
+
+    return out
+end
+
+"""
+    get_energy(spectrum, basis_state::State; tol = 0.5)
+
+Find the row in `spectrum` whose `:eigenstate` has the highest overlap with `basis_state`.
+
+Example!!!
+"""
+function get_energy(spectrum, basis_state::State; tol = 0.5)
+    closest = find_closest_eigenstate(spectrum, basis_state; tol = tol)
+    return closest.energy
+end
+
+"""
+    get_energy_difference(spectrum, basis_g::State, basis_e::State; tol = 0.5)
+
+Find the row in `spectrum` whose `:eigenstate` has the highest overlap with `basis_state`.
+
+Example!!!
+"""
+function get_energy_difference(spectrum, basis_g::State, basis_e::State; tol = 0.5)
+    return find_closest_eigenstate(spectrum, basis_e; tol = tol).energy -
+           find_closest_eigenstate(spectrum, basis_g; tol = tol).energy
+end
+
 
 """
     calculate_spectra_vs_fields(hamiltonian_parts, fields_scan, df_transform)
@@ -115,7 +172,7 @@ analysis.
 
 Internally, this method calls [`calculate_spectrum`](@ref) for each point in `fields_scan`,
 calls `df_transform` on each point (if provided), and vertically concatenates the results.
-The output is a [`DataFrames.DataFrame`](@ref), see [`calculate_spectrum`](@ref) for details
+The output is a `DataFrame`, see [`calculate_spectrum`](@ref) for details
 on the dataframe columns.
 
 See also [`make_hamiltonian_parts`](@ref), [`make_krb_hamiltonian_parts`](@ref),
@@ -133,13 +190,37 @@ function calculate_spectra_vs_fields(
         if df_transform !== nothing
             df = df_transform(df)
         end
-        out = DataFrames.vcat(out, df, cols = :orderequal)
+        DataFrames.append!(out, df)
     end
 
     return out
 end
 
+"""
+    transform_spectra(spectra, f; groupby=:fields)
+
+A generic function for transforming the output of [`calculate_spectra_vs_fields`](@ref).
+
+Returns the result of grouping `spectra` by `groupby` and applying `f` to each group,
+then combining the results into a new `DataFrame`. The signature of `f` must be
+`DataFrame -> DataFrame`.
+
+Example??
+"""
+function transform_spectra(spectra, f; groupby=:fields)
+    output = DataFrames.DataFrame()
+    grouped = DataFrames.groupby(spectra, groupby)
+
+    for spectrum in grouped
+        transformed = f(spectrum)
+        DataFrames.append!(output, transformed)
+    end
+
+    return output
+end
+
 include("analysis.jl")
 include("plotting.jl")
+include("molecule_specific.jl")
 
 end # module
