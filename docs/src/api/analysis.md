@@ -8,13 +8,8 @@ CurrentModule = MoleculeSpectrum
 Pages = ["analysis.md"]
 ```
 
-## Types
-```@autodocs
-Modules = [MoleculeSpectrum]
-Pages = ["analysis.jl"]
-Private = false
-Order = [:type]
-```
+Functions for analyzing the output of [`calculate_spectrum`](@ref) or
+[`calculate_spectra_vs_fields`](@ref).
 
 ## Methods
 ```@autodocs

@@ -7,11 +7,6 @@ CurrentModule = MoleculeSpectrum
 Pages = ["spectrum.md"]
 ```
 
-## Description
-
-Blah
-
-
 ## Methods
 ```@docs
 calculate_spectrum

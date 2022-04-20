@@ -2,15 +2,12 @@
 CurrentModule = MoleculeSpectrum
 ```
 
-# Molecule Specific
+# Molecule-specific definitions
 ```@index
 Pages = ["molecule_specific.md"]
 ```
 
-## Description
-
-Blah
-
+Constants and method defs for working with specific molecule species.
 
 ## ``{}^{40}\text{K}^{87}\text{Rb}`` (`K40Rb87`)
 ```@autodocs

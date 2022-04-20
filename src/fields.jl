@@ -296,6 +296,8 @@ The `Optical` argument can also be left as an empty vector `[]`.
 
 See also [`calculate_spectrum`](@ref), [`hamiltonian`](@ref), [`SphericalVector`](@ref).
 
+TODO: add the other signatures
+
 # Examples
 ```jldoctest
 julia> ExternalFields(VectorZ(545.9), VectorX(1020.0), [])
@@ -336,6 +338,8 @@ const TEST_FIELDS = ExternalFields(
     generate_fields_scan(Bs, Es, Opticals)
 
 Produce a vector of [`ExternalFields`](@ref) for creating a scan of spectra as a function of fields.
+
+TODO: explain the behavior as a product of the lists (not zipped)
 """
 function generate_fields_scan(Bs, Es, Opticals)
     if length(Opticals) == 0

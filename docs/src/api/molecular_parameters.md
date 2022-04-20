@@ -8,6 +8,9 @@ CurrentModule = MoleculeSpectrum
 Pages = ["molecular_parameters.md"]
 ```
 
+Structs for organizing the coupling constants, dipole moment, and nuclear spins
+of the molecule.
+
 ## Types
 ```@autodocs
 Modules = [MoleculeSpectrum]
