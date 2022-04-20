@@ -2,26 +2,24 @@
 CurrentModule = MoleculeSpectrum
 ```
 
-# Indexing molecular states
+# Analysis
 
 ```@index
-Pages = ["state.md"]
+Pages = ["analysis.md"]
 ```
-
-## Blah blah write some words
 
 ## Types
 ```@autodocs
 Modules = [MoleculeSpectrum]
-Pages = ["state.jl"]
-Private = false
+Pages = ["analysis.jl"]
+Public = false
 Order = [:type]
 ```
 
 ## Methods
 ```@autodocs
 Modules = [MoleculeSpectrum]
-Pages = ["state.jl"]
-Private = false
+Pages = ["analysis.jl"]
+Public = false
 Order = [:function]
 ```

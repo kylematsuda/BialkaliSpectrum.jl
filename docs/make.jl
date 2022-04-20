@@ -14,7 +14,7 @@ makedocs(
         "Introduction" => "index.md",
         "Test" => "man/basics.md",
         "API" => Any[
-            "Indexing molecular states" => "lib/state.md",
+            "Indexing molecular states" => "api/state.md",
         ]
     ],
     # strict = true
