@@ -7,6 +7,53 @@ function find_closest_basis_state(
     return (weight = weight, state = parts.basis[index])
 end
 
+function find_closest_eigenstate(
+    spectrum,
+    state::State;
+    tol = 0.5
+)
+    state_index = state_to_index(state)
+    get_weight(e) = abs2(e[state_index])
+
+    states = DataFrames.transform(spectrum, :eigenstate => (e -> map(get_weight, e)) => :weight)
+    DataFrames.sort!(states, DataFrames.order(:weight, rev=true))
+    out = DataFrames.first(states)
+
+    if out.weight < tol
+        @warn "The best overlap with your requested state is lower than $tol."
+    end
+
+    return out
+end
+
+function get_energy(
+    spectrum,
+    s::State;
+    tol = 0.5
+)
+    closest = find_closest_eigenstate(spectrum, s; tol=tol)
+    return closest.energy
+end
+
+function get_energy_difference(
+    spectrum,
+    g::State,
+    e::State;
+    tol = 0.5
+)
+    return find_closest_eigenstate(spectrum, e; tol=tol).energy -
+        find_closest_eigenstate(spectrum, g; tol=tol).energy
+end
+
+function get_row_by_state(
+    spectrum,
+    s::State
+)
+    index = state_to_index(s)
+    return DataFrames.filter(:basis_index => bi -> bi == index, spectrum)
+end
+
+
 function transform_spectra(
     spectra,
     f;
