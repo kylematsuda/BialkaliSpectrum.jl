@@ -24,7 +24,6 @@ function plot_transition_strengths(
     groupby=:E,
     tol=0.5,
     restrict_N=true,
-    use_cutoff=true,
     cutoff::Union{Float64,Nothing}=1e-3,
 )
     df = get_transitions(
@@ -161,6 +160,99 @@ function plot_states_adiabatic(
         )
     end
 
+    return f
+end
+
+function plot_transitions_adiabatic(
+    spectra,
+    hamiltonian_parts::HamiltonianParts,
+    ground_basis_state::State,
+    frequency_range::Union{Vector,Nothing} = nothing;
+    groupby=:E,
+    tol=0.5,
+    restrict_N=true,
+    radius::Union{Int,Nothing}=nothing 
+)
+
+    df = get_transitions(
+        spectra,
+        hamiltonian_parts,
+        ground_basis_state,
+        frequency_range;
+        groupby=groupby,
+        tol=tol,
+        restrict_N=restrict_N,
+        cutoff=nothing,
+    )
+
+    adiabatized = connect_adiabatically(df;
+        groupby=groupby,
+        radius=radius
+    )
+
+    if groupby == :E
+        xlabel = "E (V/cm)"
+    elseif groupby == :B
+        xlabel = "B (G)"
+    else
+        xlabel = "$groupby"
+    end
+
+    f = Figure(
+        fontsize = 14,
+        font = "Helvetica",
+        resolution = (300, 450),
+    )
+
+    ax = Axis(
+        f[1,1],
+        xlabel=xlabel,
+        ylabel="Energy (MHz)",
+        backgroundcolor = :gray75,
+    )
+
+    function add_max_strength(df)
+        DataFrames.sort!(df, :transition_strength)
+        max_strength = last(df).transition_strength
+        DataFrames.transform!(df,
+            :index => DataFrames.ByRow(x -> max_strength) => :max_strength
+        )
+        return df
+    end
+
+    by_strength = transform_spectra(
+        adiabatized,
+        add_max_strength;
+        groupby=:adiabatic_index
+    )
+
+    groups = DataFrames.groupby(
+        adiabatized,
+        :max_strength;
+        sort=true
+    )
+
+    cmap = :deep
+    colorrange = (-4, 0)
+
+    for g in groups
+        DataFrames.sort!(g, groupby)
+
+        println(last(g).max_strength)
+
+        lines!(
+            ax,
+            g[!, groupby],
+            g.transition_frequency,
+            color = log10.(g.transition_strength),
+            colormap=cmap,
+            colorrange=colorrange,
+            linewidth=2
+        )
+    end
+
+    Colorbar(f[1, 2], limits=colorrange, colormap=cmap, label="log10(strength)")
+    
     return f
 end
 

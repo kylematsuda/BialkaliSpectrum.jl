@@ -28,7 +28,8 @@ export filter_rotational, filter_rotational!, filter_hyperfine, filter_hyperfine
 export to_wide_format
 
 export get_induced_dipole_moments, get_transitions, connect_adiabatically
-export plot_transition_strengths, plot_induced_dipole, plot_states_adiabatic
+export plot_transition_strengths, plot_induced_dipole, plot_states_adiabatic,
+    plot_transitions_adiabatic
 
 module Constants
 "Nuclear magneton in MHz/G\n"
