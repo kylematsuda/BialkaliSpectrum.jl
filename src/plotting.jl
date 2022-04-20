@@ -114,6 +114,13 @@ function plot_induced_dipole(spectra; groupby=:fields)
     return f
 end
 
+"""
+    plot_states_adiabatic(
+        spectra;
+        groupby=:E,
+        radius::Union{Int,Nothing}=nothing
+    )
+"""
 function plot_states_adiabatic(
     spectra;
     groupby=:fields,
@@ -163,6 +170,14 @@ function plot_states_adiabatic(
     return f
 end
 
+"""
+    plot_states_adiabatic_weighted(
+        spectra,
+        states::Vector{State};
+        groupby=:E,
+        radius::Union{Int,Nothing}=nothing
+    )
+"""
 function plot_states_adiabatic_weighted(
     spectra,
     states::Vector{State};
@@ -248,6 +263,18 @@ function plot_states_adiabatic_weighted(
     return f
 end
 
+"""
+    plot_transitions_adiabatic(
+        spectra,
+        hamiltonian_parts::HamiltonianParts,
+        ground_basis_state::State,
+        frequency_range::Union{Vector,Nothing} = nothing;
+        groupby=:E,
+        tol=0.5,
+        restrict_N=true,
+        radius::Union{Int,Nothing}=nothing 
+    )
+"""
 function plot_transitions_adiabatic(
     spectra,
     hamiltonian_parts::HamiltonianParts,

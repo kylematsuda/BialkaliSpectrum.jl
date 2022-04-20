@@ -28,8 +28,8 @@ export filter_rotational, filter_rotational!, filter_hyperfine, filter_hyperfine
 export to_wide_format
 
 export get_induced_dipole_moments, get_transitions, connect_adiabatically
-export plot_transition_strengths, plot_induced_dipole, plot_states_adiabatic,
-    plot_transitions_adiabatic
+export plot_transition_strengths, plot_induced_dipole
+export plot_states_adiabatic, plot_states_adiabatic_weighted, plot_transitions_adiabatic
 
 module Constants
 "Nuclear magneton in MHz/G\n"
@@ -50,15 +50,24 @@ include("utility.jl")
 include("matrix_elements.jl")
 include("hamiltonian.jl")
 
+include("dataframe.jl")
+
 """
-    calculate_spectrum(hamiltonian_parts, external_fields)
+    calculate_spectrum(
+        hamiltonian_parts::HamiltonianParts,
+        external_fields::ExternalFields,
+    )
 
 Compute the energies and eigenstates under the external fields.
 
 To avoid reconstructing the Hamiltonian each time, `hamiltonian_parts` can be reused over calls
-to `calculate_spectrum`. The output is a [`DataFrames.DataFrame`](@ref), with the following fields:
+to `calculate_spectrum`. The output is a `DataFrame`, with the following fields:
 
 `fields`:       value of `external_fields`
+
+`B`:            magnitude of `external_fields.B`
+
+`E`:            magnitude of `external_fields.E`
 
 `index`:        index of the eigenenergy (from lowest to highest energy)
 
@@ -102,7 +111,9 @@ function calculate_spectrum(
     )
     basis_states = DataFrames.DataFrame(closest_basis_states)
 
-    return DataFrames.hcat(df, basis_states)
+    out = DataFrames.hcat(df, basis_states)
+    expand_fields!(out)
+    return out
 end
 
 """
@@ -166,7 +177,7 @@ analysis.
 
 Internally, this method calls [`calculate_spectrum`](@ref) for each point in `fields_scan`,
 calls `df_transform` on each point (if provided), and vertically concatenates the results.
-The output is a [`DataFrames.DataFrame`](@ref), see [`calculate_spectrum`](@ref) for details
+The output is a `DataFrame`, see [`calculate_spectrum`](@ref) for details
 on the dataframe columns.
 
 See also [`make_hamiltonian_parts`](@ref), [`make_krb_hamiltonian_parts`](@ref),
@@ -213,7 +224,6 @@ function transform_spectra(spectra, f; groupby=:fields)
     return output
 end
 
-include("dataframe.jl")
 include("analysis.jl")
 include("plotting.jl")
 

@@ -16,10 +16,10 @@ Private = false
 Order = [:type]
 ```
 
-## Methods
+## Constants
 ```@autodocs
 Modules = [MoleculeSpectrum]
 Pages = ["molecular_parameters.jl"]
 Private = false
-Order = [:function]
+Order = [:constant]
 ```

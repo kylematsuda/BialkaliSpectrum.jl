@@ -69,21 +69,41 @@ struct MolecularParameters
     α::Polarizability
 end
 
-"Theoretical values from Aldegunde et al. PRA (2008)\n" # TODO: Put exact citation
+"""
+    KRb_Zeeman
+
+Theoretical values from Aldegunde et al. PRA (2008)
+"""
 const KRb_Zeeman = ZeemanParameters(0.014, [-0.324, 1.834], [1321e-6, 3469e-6])
 
-"Experimental values from Neyenhuis et al., PRL 109, 230403 (2012)\n"
+"""
+    KRb_Polarizability
+
+Experimental values from Neyenhuis et al., PRL 109, 230403 (2012)
+"""
 const KRb_Polarizability = Polarizability(10.0e-5, 3.3e-5)
 
-"Experimental values from Neyenhuis et al., PRL 109, 230403 (2012)\n"
+"""
+    KRb_Nuclear_Neyenhuis
+
+Experimental values from Neyenhuis et al., PRL 109, 230403 (2012)
+"""
 const KRb_Nuclear_Neyenhuis =
     NuclearParameters([0.45, -1.308], [-24.1e-6, 420.1e-6], -2030.4e-6)
 
-"Experimental values from Ospelkaus et al., PRL 104, 030402 (2010)\n"
+"""
+    KRb_Nuclear_Ospelkaus
+
+Experimental values from Ospelkaus et al., PRL 104, 030402 (2010)
+"""
 const KRb_Nuclear_Ospelkaus =
     NuclearParameters([0.45, -1.41], [-24.1e-6, 420.1e-6], -2030.4e-6)
 
-"Experimental values from Neyenhuis et al., PRL 109, 230403 (2012)\n"
+"""
+    KRb_Parameters_Neyenhuis
+
+Experimental values from Neyenhuis et al., PRL 109, 230403 (2012)
+"""
 const KRb_Parameters_Neyenhuis = MolecularParameters(
     0.574,
     1113.9514,
@@ -93,7 +113,11 @@ const KRb_Parameters_Neyenhuis = MolecularParameters(
     KRb_Polarizability,
 )
 
-"Experimental values from Ospelkaus et al., PRL 104, 030402 (2010)\n"
+"""
+    KRb_Parameters_Ospelkaus
+
+Experimental values from Ospelkaus et al., PRL 104, 030402 (2010)
+"""
 const KRb_Parameters_Ospelkaus = MolecularParameters(
     0.574,
     1113.950,
@@ -103,6 +127,11 @@ const KRb_Parameters_Ospelkaus = MolecularParameters(
     KRb_Polarizability,
 )
 
+"""
+    DEFAULT_MOLECULAR_PARAMETERS
+
+Uses [`KRb_Parameters_Neyenhuis`](@ref).
+"""
 const DEFAULT_MOLECULAR_PARAMETERS = KRb_Parameters_Neyenhuis
 
 """
