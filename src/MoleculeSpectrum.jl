@@ -15,8 +15,8 @@ export KRb_Parameters_Neyenhuis,
 export SphericalVector, VectorX, VectorY, VectorZ
 export ExternalFields, DEFAULT_FIELDS, TEST_FIELDS, generate_fields_scan
 
-export State, KRbState, index_to_state, state_to_index, find_closest_basis_state
-export state_to_named_tuple, state_to_string
+export State, KRbState, basis_state, basis_index, closest_basis_state
+export convert, state_to_string
 
 export HamiltonianParts, make_hamiltonian_parts, hamiltonian, make_krb_hamiltonian_parts
 
@@ -25,9 +25,9 @@ export find_closest_eigenstate, get_energy, get_energy_difference
 
 export filter_rotational, filter_rotational!, filter_hyperfine, filter_hyperfine!,
     filter_basis_state, filter_basis_state!, expand_fields!
-export to_wide_format
+export wide_format
 
-export get_induced_dipole_moments, get_transitions, connect_adiabatically
+export induced_dipole_moments, transitions, adiabatic
 export plot_transition_strengths, plot_induced_dipole
 export plot_states_adiabatic, plot_states_adiabatic_weighted, plot_transitions_adiabatic
 
@@ -46,7 +46,6 @@ include("molecular_parameters.jl")
 include("fields.jl")
 include("state.jl")
 
-include("utility.jl")
 include("matrix_elements.jl")
 include("hamiltonian.jl")
 
@@ -106,8 +105,8 @@ function calculate_spectrum(
     )
 
     closest_basis_states = map(
-        s -> (basis_index = state_to_index(s), state_to_named_tuple(s)...),
-        map(s -> find_closest_basis_state(hamiltonian_parts, s).state, states),
+        s -> (basis_index = basis_index(s), convert(NamedTuple, s)...),
+        map(s -> closest_basis_state(hamiltonian_parts, s).state, states),
     )
     basis_states = DataFrames.DataFrame(closest_basis_states)
 
@@ -124,7 +123,7 @@ Find the row in `spectrum` whose `:eigenstate` has the highest overlap with `bas
 Example!!!
 """
 function find_closest_eigenstate(spectrum, basis_state::State; tol=0.5)
-    state_index = state_to_index(basis_state)
+    state_index = basis_index(basis_state)
     get_weight(e) = abs2(e[state_index])
 
     states =

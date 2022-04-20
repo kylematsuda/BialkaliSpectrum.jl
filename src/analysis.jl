@@ -1,7 +1,7 @@
 """
-    find_closest_basis_state(parts::HamiltonianParts, state)
+    closest_basis_state(parts::HamiltonianParts, state)
 """
-function find_closest_basis_state(parts::HamiltonianParts, state)
+function closest_basis_state(parts::HamiltonianParts, state)
     weights = map(abs2, state)
     (weight, index) = findmax(weights)
     return (weight = weight, state = parts.basis[index])
@@ -29,7 +29,7 @@ function dressed_dipole_moment(
 end
 
 """
-    dressed_dipole_moment(
+    dressed_dipole_moment_vector(
         hamiltonian_parts::HamiltonianParts,
         g,
         e,
@@ -45,7 +45,7 @@ function dressed_dipole_moment_vector(
 end
 
 """
-    get_induced_dipole_moments(
+    induced_dipole_moments(
         spectra,
         hamiltonian_parts::HamiltonianParts;
         groupby=:fields
@@ -54,7 +54,7 @@ end
 Returns a new `DataFrame` containing `spectra` with an additional column `:d_ind`,
 the induced dipole moment parallel to the applied electric field.
 """
-function get_induced_dipole_moments(
+function induced_dipole_moments(
     spectra,
     hamiltonian_parts::HamiltonianParts
 )
@@ -107,7 +107,7 @@ function with_ground_state(
 end
 
 """
-    get_transitions(
+    transitions(
         spectra,
         hamiltonian_parts::HamiltonianParts,
         ground_basis_state::State,
@@ -119,7 +119,7 @@ end
     )
 
 """
-function get_transitions(
+function transitions(
     spectra,
     hamiltonian_parts::HamiltonianParts,
     ground_basis_state::State,
@@ -193,14 +193,14 @@ function get_transitions(
 end
 
 """
-    connect_adiabatically(
+    adiabatic(
         spectra;
         groupby=:fields,
         radius::Union{Int,Nothing}=nothing
     )
 
 """
-function connect_adiabatically(
+function adiabatic(
     spectra;
     groupby=:fields,
     radius::Union{Int,Nothing}=nothing

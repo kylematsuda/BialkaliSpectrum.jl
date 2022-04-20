@@ -26,7 +26,7 @@ function plot_transition_strengths(
     restrict_N=true,
     cutoff::Union{Float64,Nothing}=1e-3,
 )
-    df = get_transitions(
+    df = transitions(
         spectrum,
         hamiltonian_parts,
         ground_basis_state,
@@ -79,7 +79,7 @@ function plot_induced_dipole(
     groupby=:E
 )
     return plot_induced_dipole(
-        get_induced_dipole_moments(spectra,
+        induced_dipole_moments(spectra,
             hamiltonian_parts;
             groupby=groupby
         );
@@ -126,7 +126,7 @@ function plot_states_adiabatic(
     groupby=:fields,
     radius::Union{Int,Nothing}=nothing 
 )
-    adiabatized = connect_adiabatically(spectra;
+    adiabatized = adiabatic(spectra;
         groupby=groupby,
         radius=radius
     )
@@ -184,7 +184,7 @@ function plot_states_adiabatic_weighted(
     groupby=:E,
     radius::Union{Int,Nothing}=nothing 
 )
-    adiabatized = connect_adiabatically(spectra;
+    adiabatized = adiabatic(spectra;
         groupby=groupby,
         radius=radius
     )
@@ -214,7 +214,7 @@ function plot_states_adiabatic_weighted(
     colorrange = (-4, 0)
 
     max_weight(ev) = maximum([
-        ev[state_to_index(s)] |> abs2
+        ev[basis_index(s)] |> abs2
         for s in states
     ])
 
@@ -286,7 +286,7 @@ function plot_transitions_adiabatic(
     radius::Union{Int,Nothing}=nothing 
 )
 
-    df = get_transitions(
+    df = transitions(
         spectra,
         hamiltonian_parts,
         ground_basis_state,
@@ -297,7 +297,7 @@ function plot_transitions_adiabatic(
         cutoff=nothing,
     )
 
-    adiabatized = connect_adiabatically(df;
+    adiabatized = adiabatic(df;
         groupby=groupby,
         radius=radius
     )

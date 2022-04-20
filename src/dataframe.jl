@@ -65,7 +65,7 @@ Returns a new `DataFrame` containing the rows of `df` whose `:eigenstate` is
 most overlapping with `basis_state`.
 """
 filter_basis_state(df, basis_state::State) = 
-    DataFrames.filter(:basis_index => bi -> bi == state_to_index(basis_state), df)
+    DataFrames.filter(:basis_index => bi -> bi == basis_index(basis_state), df)
 
 """
     filter_basis_state!(df, basis_state::State)
@@ -74,7 +74,7 @@ Retains the rows of `df` whose `:eigenstate` is most overlapping with `basis_sta
 This mutates `df`.
 """
 filter_basis_state!(df, basis_state::State) = 
-    DataFrames.filter!(:basis_index => bi -> bi == state_to_index(basis_state), df)
+    DataFrames.filter!(:basis_index => bi -> bi == basis_index(basis_state), df)
 
 """
     expand_fields!(df; magnitude_only=true)
@@ -122,12 +122,12 @@ function expand_fields!(df; magnitude_only=true)
 end
 
 """
-    to_wide_format(spectra, valuecol, renamecols::Function; groupby=:fields)
+    wide_format(spectra, valuecol, renamecols::Function; groupby=:fields)
 
 `renamecols` is a function `row -> String`, where `row` is a row of a `DataFrame`.
 
 """
-function to_wide_format(spectra, valuecol, renamecols::Function; groupby=:fields)
+function wide_format(spectra, valuecol, renamecols::Function; groupby=:fields)
     function unstacking(df)
         vals = Dict()
         vals["$groupby"] = first(df)[groupby]
