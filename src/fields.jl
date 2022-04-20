@@ -294,7 +294,9 @@ External magnetic, electric, optical fields to use in constructing the Hamiltoni
 If `B` and `E` are provided as `Float64`s, then the fields are assumed to be along `z`.
 The `Optical` argument can also be left as an empty vector `[]`.
 
-See also [`calculate_spectrum`](@ref), [`hamiltonian`](@ref), [`SphericalVector`](@ref).
+See also [`get_spectrum`](@ref), [`hamiltonian`](@ref), [`SphericalVector`](@ref).
+
+TODO: add the other signatures
 
 # Examples
 ```jldoctest
@@ -336,6 +338,8 @@ const TEST_FIELDS = ExternalFields(
     generate_fields_scan(Bs, Es, Opticals)
 
 Produce a vector of [`ExternalFields`](@ref) for creating a scan of spectra as a function of fields.
+
+TODO: explain the behavior as a product of the lists (not zipped)
 """
 function generate_fields_scan(Bs, Es, Opticals)
     if length(Opticals) == 0

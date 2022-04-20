@@ -10,7 +10,7 @@ const parts_neyenhuis = make_krb_hamiltonian_parts(N_max)
 
     fields = ExternalFields(545.9, 0.0)
     parts = make_hamiltonian_parts(KRb_Parameters_Ospelkaus, N_max)
-    spectrum = calculate_spectrum(parts, fields)
+    spectrum = get_spectrum(parts, fields)
 
     # Table II in paper
     comparisons = [
@@ -41,7 +41,7 @@ end
     B = 545.9
 
     fields = ExternalFields(B, 0.0)
-    spectrum = calculate_spectrum(parts_neyenhuis, fields)
+    spectrum = get_spectrum(parts_neyenhuis, fields)
 
     @testset "No optical fields" begin
         tolerance = 0.005 # MHz
@@ -95,7 +95,7 @@ end
             θ = c[1] * π / 180
             optical = SphericalVector(I_light, θ, 0.0)
             fields_with_light = ExternalFields(VectorZ(B), VectorZ(0.0), [optical])
-            spectrum_light = calculate_spectrum(parts_neyenhuis, fields_with_light)
+            spectrum_light = get_spectrum(parts_neyenhuis, fields_with_light)
 
             es_light = map(x -> get_energy(spectrum_light, KRbState(x...)), states_to_check)
 
@@ -127,10 +127,10 @@ end
     e_xyz = ExternalFields(VectorZ(0.0), SphericalVector(E, π / 3, π / 3), [])
 
     for fields in [(b_z, (b_x, b_y, b_xz, b_xyz)), (e_z, (e_x, e_y, e_xz, e_xyz))]
-        spectrum_z = calculate_spectrum(parts_neyenhuis, fields[1])
+        spectrum_z = get_spectrum(parts_neyenhuis, fields[1])
 
         for f in fields[2]
-            spectrum = calculate_spectrum(parts_neyenhuis, f)
+            spectrum = get_spectrum(parts_neyenhuis, f)
             @test spectrum.energy ≈ spectrum_z.energy
         end
     end
@@ -148,10 +148,10 @@ end
         φ = 0:2π/7:2π
     ]
 
-    sz = calculate_spectrum(parts_neyenhuis, fields_z)
+    sz = get_spectrum(parts_neyenhuis, fields_z)
 
     for f in fields_test
-        s = calculate_spectrum(parts_neyenhuis, f)
+        s = get_spectrum(parts_neyenhuis, f)
         @test s.energy ≈ sz.energy
     end
 end
@@ -161,7 +161,7 @@ end
 #     B = TOY_MOLECULE_PARAMETERS.Bᵣ
 
 #     fields = ExternalFields(0.0, 0.0) # no fields
-#     spectrum = calculate_spectrum(parts, fields)
+#     spectrum = spectrum(parts, fields)
 
 #     frequency_range = [2B - 1, 2B + 1]
 

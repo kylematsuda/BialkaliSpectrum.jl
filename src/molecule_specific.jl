@@ -73,7 +73,7 @@ Construct all parts of the ``{}^{40}\\text{K}^{87}\\text{Rb}`` Hamiltonian
 that do not depend on external fields.
 
 The rotational states `0:N_max` are included. This is a shortcut method that
-replaces `make_hamiltonian_parts` for KRb.
+replaces [`make_hamiltonian_parts`](@ref) for KRb.
 
 See also [`make_hamiltonian_parts`](@ref).
 """

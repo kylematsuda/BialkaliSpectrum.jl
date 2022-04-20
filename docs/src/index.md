@@ -11,17 +11,11 @@ Depth = 2
 
 ## Public API
 ```@contents
-Pages = ["api/state.md",
-    "api/molecular_parameters.md",
-    "api/molecule_specific.md",
-    "api/hamiltonian.md",
-    "api/fields.md",
-    "api/spectrum.md",
-    "api/analysis.md",
-    "api/dataframe.md",
-    "api/plotting.md",
+Pages = [
+    "api/setting_up.md",
+    "api/analyzing_spectrum.md",
 ]
-Depth = 2
+Depth = 3
 ```
 
 ## Internals

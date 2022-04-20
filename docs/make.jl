@@ -14,7 +14,8 @@ makedocs(
         "Introduction" => "index.md",
         "Test" => "man/basics.md",
         "API" => Any[
-            "Indexing molecular states" => "api/state.md",
+            "Setting up a calculation" => "api/setting_up.md",
+            "Analyzing the results" => "api/analyzing_spectrum.md"
         ]
     ],
     # strict = true

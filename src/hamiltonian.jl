@@ -138,7 +138,7 @@ This allows the full Hamiltonian to be re-constructed at various
 field values and orientations without recalculating all of the matrix elements.
 
 Should be created by [`make_hamiltonian_parts`](@ref) or [`make_krb_hamiltonian_parts`](@ref).
-Used as an input to [`calculate_spectrum`](@ref) and [`hamiltonian`](@ref).
+Used as an input to [`get_spectrum`](@ref) and [`hamiltonian`](@ref).
 
 See also [`make_hamiltonian_parts`](@ref), [`make_krb_hamiltonian_parts`](@ref).
 """
