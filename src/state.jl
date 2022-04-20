@@ -1,21 +1,21 @@
 """
-    State
+    State(N, mₙ, I, mᵢ)    
+    State(N, mₙ, I₁, mᵢ₁, I₂, mᵢ₂)
 
-Represents a molecular state in the uncoupled basis.
+Represents a molecular state in the uncoupled basis ``|N, mₙ, I₁, mᵢ₁, I₂, mᵢ₂⟩``.
+
+Write something more descriptive here
+
 """
 struct State
     N::Int
     mₙ::Int
     I::SVector{2,HalfInt} # [K, Rb]
     mᵢ::SVector{2,HalfInt}
+
+    State(N, mₙ, I, mᵢ) = new(N, mₙ, I, mᵢ)
 end
 
-"""
-    State(N, mₙ, I₁, mᵢ₁, I₂, mᵢ₂)
-
-Creates a basis state ``|N, mₙ, I₁, mᵢ₁, I₂, mᵢ₂⟩``.
-
-"""
 State(N, mₙ, I₁, mᵢ₁, I₂, mᵢ₂) =
     State(N, mₙ, SVector(HalfInt(I₁), HalfInt(I₂)), SVector(HalfInt(mᵢ₁), HalfInt(mᵢ₂)))
 

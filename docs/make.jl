@@ -1,5 +1,21 @@
-push!(LOAD_PATH, "../src/")
+# push!(LOAD_PATH, "../src/")
 
 using Documenter, MoleculeSpectrum
 
-makedocs(sitename = "MoleculeSpectrum documentation")
+DocMeta.setdocmeta!(MoleculeSpectrum, :DocTestSetup, :(using MoleculeSpectrum); recursive=true)
+
+makedocs(
+    sitename = "MoleculeSpectrum documentation",
+    modules = [MoleculeSpectrum],
+    doctest = true,
+    clean = true,
+    format = Documenter.HTML(prettyurls = false),
+    pages = Any[
+        "Introduction" => "index.md",
+        "Test" => "man/basics.md",
+        "API" => Any[
+            "Indexing molecular states" => "lib/state.md",
+        ]
+    ],
+    # strict = true
+)

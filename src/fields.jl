@@ -307,11 +307,6 @@ ExternalFields(SphericalVector(545.9, 0.0, 0.0), SphericalVector(1020.0, 1.57079
 julia> ExternalFields(545.9, 1020.0)
 ExternalFields(SphericalVector(545.9, 0.0, 0.0), SphericalVector(1020.0, 0.0, 0.0), SphericalVector[])
 ```
-
-```jldoctest
-julia> ExternalFields(VectorZ(545.9), VectorX(1020.0), [VectorY(2300.), SphericalVector(2300., π/2, π/4)])
-[...]
-```
 """
 struct ExternalFields
     "Magnetic field (G)\n"
