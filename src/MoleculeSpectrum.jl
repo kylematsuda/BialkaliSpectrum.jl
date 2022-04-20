@@ -20,7 +20,7 @@ export ExternalFields, DEFAULT_FIELDS, TEST_FIELDS, generate_fields_scan
 export State, KRbState, index_to_state, state_to_index
 export order_by_overlap_with,
     max_overlap_with, find_closest_basis_state, decompose_to_basis_states
-export get_energy, get_energy_difference, get_row_by_state
+export get_energy, get_energy_difference
 
 export HamiltonianParts, make_hamiltonian_parts, hamiltonian, make_krb_hamiltonian_parts
 
@@ -28,7 +28,9 @@ export calculate_spectrum, calculate_spectra_vs_fields
 export calculate_transition_strengths, plot_transition_strengths
 export calculate_transitions_vs_E, plot_transitions_vs_E
 
-export filter_rotational, filter_rotational!, filter_hyperfine, filter_hyperfine!, expand_fields!, find_closest_eigenstate
+export filter_rotational, filter_rotational!, filter_hyperfine, filter_hyperfine!,
+    filter_by_state, filter_by_state!
+export expand_fields!, find_closest_eigenstate
 
 module Constants
 "Nuclear magneton in MHz/G\n"

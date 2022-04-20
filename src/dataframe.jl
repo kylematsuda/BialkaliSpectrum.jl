@@ -45,6 +45,24 @@ filter_hyperfine!(df, m_i1, m_i2) = DataFrames.filter(
 )
 
 """
+    filter_basis_state(df, basis_state::State)
+
+Returns a new `DataFrame` containing the rows of `df` whose `:eigenstate` is
+most overlapping with `basis_state`.
+"""
+filter_basis_state(df, basis_state::State) = 
+    DataFrames.filter(:basis_index => bi -> bi == state_to_index(basis_state), df)
+
+"""
+    filter_basis_state!(df, basis_state::State)
+
+Retains the rows of `df` whose `:eigenstate` is most overlapping with `basis_state`.
+This mutates `df`.
+"""
+filter_basis_state(df, basis_state::State) = 
+    DataFrames.filter!(:basis_index => bi -> bi == state_to_index(basis_state), df)
+
+"""
     expand_fields!(df; magnitude_only=true)
     expand_fields!(df, col_names::Vector{Symbol}, expander::Function)
 
@@ -111,4 +129,3 @@ function find_closest_eigenstate(spectrum, basis_state::State; tol=0.5)
 
     return out
 end
-

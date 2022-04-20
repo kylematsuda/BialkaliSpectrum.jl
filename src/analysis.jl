@@ -10,10 +10,6 @@ function get_energy_difference(spectrum, g::State, e::State; tol = 0.5)
            find_closest_eigenstate(spectrum, g; tol = tol).energy
 end
 
-function get_row_by_state(spectrum, s::State)
-    index = state_to_index(s)
-    return DataFrames.filter(:basis_index => bi -> bi == index, spectrum)
-end
 
 function _calculate_transition_strengths(
     spectrum,
