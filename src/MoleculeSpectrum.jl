@@ -216,9 +216,7 @@ function transform_spectra(spectra, f; groupby=:fields)
     return output
 end
 
-
-include("eigenstates.jl")
-
+include("dressed.jl")
 include("dataframe.jl")
 include("analysis.jl")
 include("plotting.jl")

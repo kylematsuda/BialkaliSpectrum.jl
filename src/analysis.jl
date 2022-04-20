@@ -1,5 +1,5 @@
 """
-    calculate_induced_dipole_moments(
+    get_induced_dipole_moments(
         spectra,
         hamiltonian_parts::HamiltonianParts;
         groupby=:fields
@@ -10,20 +10,17 @@ the induced dipole moment parallel to the applied electric field.
 """
 function get_induced_dipole_moments(
     spectra,
-    hamiltonian_parts::HamiltonianParts;
-    groupby=:fields
+    hamiltonian_parts::HamiltonianParts
 )
     d_ind(state, fields) = tensor_dot(
         SphericalUnitVector(fields.E) |> T⁽¹⁾, # field orientation spherical tensor
         dressed_dipole_moment_vector(hamiltonian_parts, state, state)
     ) |> real
 
-    add_d_ind(df) = DataFrames.transform(df,
+    return DataFrames.transform(spectra,
         [:eigenstate, :fields] =>
             DataFrames.ByRow((s, f) -> d_ind(s, f)) => :d_ind,
     )
-
-    return transform_spectra(spectra, add_d_ind; groupby=groupby)
 end
 
 """
@@ -84,7 +81,8 @@ function get_transitions(
     groupby=:fields,
     tol=0.5,
     restrict_N=true,
-    cutoff::Union{Float64,Nothing}=1e-3
+    cutoff::Union{Float64,Nothing}=1e-3,
+    normalization=1/3
 )
 
     function make_transitions(df)
@@ -111,7 +109,7 @@ function get_transitions(
         )
         DataFrames.transform!(out,
             [:d_minus, :d_0, :d_plus] =>
-                DataFrames.ByRow((dm, d0, dp) -> abs2.([dm, d0, dp]) |> sum)
+                DataFrames.ByRow((dm, d0, dp) -> (1/normalization) * abs2.([dm, d0, dp]) |> sum)
                     => :transition_strength
         )
     end
@@ -128,7 +126,12 @@ function get_transitions(
         groupby
     )
 
-    DataFrames.filter!(:transition_frequency => f -> f > 0, transformed)
+    if frequency_range !== nothing
+        DataFrames.filter!(
+            :transition_frequency => f -> f >= frequency_range[1] && f <= frequency_range[2],
+            transformed
+        )
+    end
 
     if restrict_N
         DataFrames.filter!(:N => n -> n == ground_basis_state.N + 1,
@@ -141,6 +144,56 @@ function get_transitions(
     end
 
     return transformed
+end
+
+"""
+    connect_adiabatic(
+        spectra;
+        groupby=:fields,
+        radius::Union{Int,Nothing}=nothing
+    )
+
+"""
+function connect_adiabatic(
+    spectra;
+    groupby=:fields,
+    radius::Union{Int,Nothing}=nothing
+)
+    function find_closest(prev_df, ev, e)
+        if radius !== nothing
+            prev_df = DataFrames.sort!(
+                DataFrames.transform(
+                    prev_df,
+                    :energy => DataFrames.ByRow(en -> abs(en - e)) => :e_diff),
+                :e_diff
+            )
+            prev_df = first(prev_df, radius)
+        end
+        
+        overlap(e) = abs2(e' * ev)
+        max_overlap_index = findmax(map(
+            overlap,
+            prev_df.eigenstate
+        ))[2];
+
+        return prev_df.adiabatic_index[max_overlap_index]
+    end
+
+    grouped = DataFrames.groupby(spectra, groupby)
+
+    DataFrames.transform!(grouped[1], :index => (_ -> 1:DataFrames.nrow(grouped[1])) => :adiabatic_index)
+    last = grouped[1]
+
+    for i in 2:length(grouped)
+        curr = grouped[i]
+        DataFrames.transform!(
+            curr, 
+            [:eigenstate, :energy] => DataFrames.ByRow((es, en) -> find_closest(last, es, en)) => :adiabatic_index
+        )
+        last = curr
+    end
+    
+    return DataFrames.combine(grouped, DataFrames.valuecols(grouped))
 end
 
 # function _calculate_transition_strengths(

@@ -1,8 +1,15 @@
 """
+    filter_rotational(df, N)    
     filter_rotational(df, N, m_n)
 
 Returns a new `DataFrame` containing the rows of `df` where `(row.N in N) && (row.m_n in m_n)`.
 """
+filter_rotational(df, N) = DataFrames.filter(
+    [:N] =>
+        n -> n in N,
+    df
+)
+
 filter_rotational(df, N, m_n) = DataFrames.filter(
     [:N, :m_n] =>
         (n, m) -> (n in N) && (m in m_n),
@@ -10,11 +17,18 @@ filter_rotational(df, N, m_n) = DataFrames.filter(
 )
 
 """
+    filter_rotational!(df, N)    
     filter_rotational!(df, N, m_n)
 
 Retains the rows of `df` where `(row.N in N) && (row.m_n in m_n)`, removing the rest.
 This mutates `df`.
 """
+filter_rotational!(df, N) = DataFrames.filter!(
+    :N =>
+        n -> n in N,
+    df
+)
+
 filter_rotational!(df, N, m_n) = DataFrames.filter!(
     [:N, :m_n] =>
         (n, m) -> (n in N) && (m in m_n),
@@ -86,7 +100,7 @@ This variant should be used for extracting the optical field parameters.
 Add examples!
 """
 expand_fields!(df, field_names::Vector{Symbol}, expander::Function) =
-    transform!(df, :fields => ByRow(expander) => fields_names)
+    DataFrames.transform!(df, :fields => DataFrames.ByRow(expander) => field_names)
 
 function expand_fields!(df; magnitude_only=true)
     if magnitude_only
@@ -104,6 +118,26 @@ function expand_fields!(df; magnitude_only=true)
         ]
     end
 
-    return expand_fields!(df, fields_names, expander)
+    return expand_fields!(df, field_names, expander)
 end
 
+"""
+    unstack_ugly(spectra, valuecol, renamecols::Function; groupby=:fields)
+
+`renamecols` is a function `row -> String`, where `row` is a row of a `DataFrame`.
+
+"""
+function unstack_ugly(spectra, valuecol, renamecols::Function; groupby=:fields)
+    function unstacking(df)
+        vals = Dict()
+        vals["$groupby"] = first(df)[groupby]
+
+        for row in eachrow(df)
+            vals[renamecols(row)] = row[valuecol]
+        end
+
+        return DataFrames.DataFrame(vals)
+    end
+
+    return transform_spectra(spectra, unstacking; groupby=groupby)
+end
