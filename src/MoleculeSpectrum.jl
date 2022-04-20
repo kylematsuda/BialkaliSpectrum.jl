@@ -28,6 +28,8 @@ export calculate_spectrum, calculate_spectra_vs_fields
 export calculate_transition_strengths, plot_transition_strengths
 export calculate_transitions_vs_E, plot_transitions_vs_E
 
+export filter_rotational, filter_rotational!, filter_hyperfine, filter_hyperfine!, expand_fields!, find_closest_eigenstate
+
 module Constants
 "Nuclear magneton in MHz/G\n"
 const μN = 7.622593285e-4
@@ -139,6 +141,33 @@ function calculate_spectra_vs_fields(
     return out
 end
 
+"""
+    transform_spectra(spectra, f; groupby=:fields)
+
+A generic function for transforming the output of [`calculate_spectra_vs_fields`](@ref).
+
+Returns the result of grouping `spectra` by `groupby` and applying `f` to each group,
+then combining the results into a new `DataFrame`. The signature of `f` must be
+`DataFrame -> DataFrame`.
+
+Example??
+"""
+function transform_spectra(spectra, f; groupby=:fields)
+    output = DataFrames.DataFrame()
+    grouped = DataFrames.groupby(spectra, groupby)
+
+    for spectrum in grouped
+        transformed = f(spectrum)
+        output = DataFrames.vcat(output, transformed)
+    end
+
+    return output
+end
+
+
+include("eigenstates.jl")
+
+include("dataframe.jl")
 include("analysis.jl")
 include("plotting.jl")
 

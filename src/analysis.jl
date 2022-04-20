@@ -1,24 +1,4 @@
-function find_closest_basis_state(parts::HamiltonianParts, state)
-    weights = map(abs2, state)
-    (weight, index) = findmax(weights)
-    return (weight = weight, state = parts.basis[index])
-end
 
-function find_closest_eigenstate(spectrum, state::State; tol = 0.5)
-    state_index = state_to_index(state)
-    get_weight(e) = abs2(e[state_index])
-
-    states =
-        DataFrames.transform(spectrum, :eigenstate => (e -> map(get_weight, e)) => :weight)
-    DataFrames.sort!(states, DataFrames.order(:weight, rev = true))
-    out = DataFrames.first(states)
-
-    if out.weight < tol
-        @warn "The best overlap with your requested state is lower than $tol."
-    end
-
-    return out
-end
 
 function get_energy(spectrum, s::State; tol = 0.5)
     closest = find_closest_eigenstate(spectrum, s; tol = tol)
@@ -33,19 +13,6 @@ end
 function get_row_by_state(spectrum, s::State)
     index = state_to_index(s)
     return DataFrames.filter(:basis_index => bi -> bi == index, spectrum)
-end
-
-
-function transform_spectra(spectra, f; groupby = :fields)
-    output = DataFrames.DataFrame()
-    grouped = DataFrames.groupby(spectra, groupby)
-
-    for spectrum in grouped
-        transformed = f(spectrum)
-        output = DataFrames.vcat(output, transformed)
-    end
-
-    return output
 end
 
 function _calculate_transition_strengths(
@@ -74,7 +41,7 @@ function _calculate_transition_strengths(
     end
 
     get_matrix_elements(eigenstate) = [
-        calculate_dipole_matrix_element(hamiltonian_parts, g_vec, eigenstate, p) |> abs
+        dressed_dipole_moment(hamiltonian_parts, g_vec, eigenstate, p) |> abs
         for p = -1:1
     ]
     DataFrames.transform!(
@@ -157,19 +124,6 @@ function calculate_transitions_vs_E(
     return spectra
 end
 
-function calculate_dipole_matrix_element(
-    hamiltonian_parts::HamiltonianParts,
-    g,
-    e,
-    polarization::Int,
-)::ComplexF64
-    @assert polarization <= 1 && polarization >= -1
-
-    index = polarization + 2 # components are p = -1, 0, 1
-    h_dipole = hamiltonian_parts.dipole_relative[index]
-    return e' * h_dipole * g
-end
-
 function calculate_induced_dipole_moments(spectra, hamiltonian_parts::HamiltonianParts)
     output = DataFrames.DataFrame()
     grouped_by_fields = DataFrames.groupby(spectra, :fields)
@@ -185,7 +139,7 @@ end
 function _calculate_induced_dipole_moments(spectrum, hamiltonian_parts::HamiltonianParts)
     get_field_orientation(f::ExternalFields) = SphericalUnitVector(f.E) |> T⁽¹⁾
     get_matrix_elements(s) =
-        [calculate_dipole_matrix_element(hamiltonian_parts, s, s, p) for p = -1:1]
+        [dressed_dipole_moment(hamiltonian_parts, s, s, p) for p = -1:1]
     get_induced_dipole(s, f) = tensor_dot(get_field_orientation(f), get_matrix_elements(s))
 
     return DataFrames.combine(

@@ -18,6 +18,7 @@ Pages = ["api/constants.md",
     "api/hamiltonian.md",
     "api/fields.md",
     "api/analysis.md",
+    "api/dataframe.md",
 ]
 Depth = 2
 ```
