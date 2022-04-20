@@ -156,34 +156,34 @@ end
     end
 end
 
-@testset "Transition strengths without hyperfine couplings" begin
-    parts = make_hamiltonian_parts(TOY_MOLECULE_PARAMETERS, N_max)
-    B = TOY_MOLECULE_PARAMETERS.Bᵣ
+# @testset "Transition strengths without hyperfine couplings" begin
+#     parts = make_hamiltonian_parts(TOY_MOLECULE_PARAMETERS, N_max)
+#     B = TOY_MOLECULE_PARAMETERS.Bᵣ
 
-    fields = ExternalFields(0.0, 0.0) # no fields
-    spectrum = calculate_spectrum(parts, fields)
+#     fields = ExternalFields(0.0, 0.0) # no fields
+#     spectrum = calculate_spectrum(parts, fields)
 
-    frequency_range = [2B - 1, 2B + 1]
+#     frequency_range = [2B - 1, 2B + 1]
 
-    g = State(0, 0, 1, 0, 1, 0)
-    e10 = State(1, 0, 1, 0, 1, 0)
-    e1m1 = State(1, -1, 1, 0, 1, 0)
-    e1p1 = State(1, 1, 1, 0, 1, 0)
+#     g = State(0, 0, 1, 0, 1, 0)
+#     e10 = State(1, 0, 1, 0, 1, 0)
+#     e1m1 = State(1, -1, 1, 0, 1, 0)
+#     e1p1 = State(1, 1, 1, 0, 1, 0)
 
-    df = calculate_transition_strengths(spectrum, parts, g)
+#     df = calculate_transition_strengths(spectrum, parts, g)
 
-    # π transitions
-    π_first = sort(df, order(:d_0, by=abs2, rev=true))
-    @test abs(first(π_first).d_0) .≈ 1/sqrt(3)
-    @test first(π_first).basis_index == state_to_index(e10)
+#     # π transitions
+#     π_first = sort(df, order(:d_0, by=abs2, rev=true))
+#     @test abs(first(π_first).d_0) .≈ 1/sqrt(3)
+#     @test first(π_first).basis_index == state_to_index(e10)
 
-    # σ+ transitions
-    dp_first = sort(df, order(:d_plus, by=abs2, rev=true))
-    @test abs(first(dp_first).d_plus) .≈ 1/sqrt(3)
-    @test first(dp_first).basis_index == state_to_index(e1p1)
+#     # σ+ transitions
+#     dp_first = sort(df, order(:d_plus, by=abs2, rev=true))
+#     @test abs(first(dp_first).d_plus) .≈ 1/sqrt(3)
+#     @test first(dp_first).basis_index == state_to_index(e1p1)
 
-    # σ- transitions
-    dm_first = sort(df, order(:d_minus, by=abs2, rev=true))
-    @test abs(first(dm_first).d_minus) .≈ 1/sqrt(3)
-    @test first(dm_first).basis_index == state_to_index(e1m1)
-end
+#     # σ- transitions
+#     dm_first = sort(df, order(:d_minus, by=abs2, rev=true))
+#     @test abs(first(dm_first).d_minus) .≈ 1/sqrt(3)
+#     @test first(dm_first).basis_index == state_to_index(e1m1)
+# end

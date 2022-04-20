@@ -66,15 +66,6 @@ function state_to_index(s::State)::Int
     return 1 + (rotation - 1) * N_Hyperfine + hyperfine
 end
 
-function find_closest_basis_state(
-    parts::HamiltonianParts,
-    state
-)
-    weights = map(abs2, state)
-    (weight, index) = findmax(weights)
-    return (weight = weight, state = parts.basis[index])
-end
-
 function find_closest_eigenstate(
     spectrum,
     state::State;

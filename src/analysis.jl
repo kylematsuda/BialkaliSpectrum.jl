@@ -1,3 +1,12 @@
+function find_closest_basis_state(
+    parts::HamiltonianParts,
+    state
+)
+    weights = map(abs2, state)
+    (weight, index) = findmax(weights)
+    return (weight = weight, state = parts.basis[index])
+end
+
 function transform_spectra(
     spectra,
     f;

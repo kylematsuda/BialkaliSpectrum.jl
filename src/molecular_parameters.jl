@@ -1,3 +1,6 @@
+using StaticArrays
+import HalfIntegers: HalfInt
+
 """
     ZeemanParameters
 

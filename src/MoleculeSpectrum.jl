@@ -7,7 +7,7 @@ import DataFrames
 import ProgressMeter
 using LinearAlgebra, SparseArrays, StaticArrays, Test
 
-export ZeemanParameters, NuclearParameters, Polarizability, MolecularParameters
+# export ZeemanParameters, NuclearParameters, Polarizability, MolecularParameters
 export KRb_Zeeman, KRb_Nuclear_Neyenhuis, KRb_Nuclear_Ospelkaus, KRb_Polarizability
 export KRb_Parameters_Neyenhuis,
     KRb_Parameters_Ospelkaus, DEFAULT_MOLECULAR_PARAMETERS, TOY_MOLECULE_PARAMETERS
@@ -38,8 +38,29 @@ const h = 6.62607004e-34
 const DVcm⁻¹ToMHz = (DToSI / h) * 1e-4
 end # module
 
+
+module Parameters
+export ZeemanParameters, NuclearParameters, Polarizability, MolecularParameters
+export KRb_Zeeman, KRb_Nuclear_Neyenhuis, KRb_Nuclear_Ospelkaus, KRb_Polarizability
+export KRb_Parameters_Neyenhuis,
+    KRb_Parameters_Ospelkaus, DEFAULT_MOLECULAR_PARAMETERS, TOY_MOLECULE_PARAMETERS
+
 include("molecular_parameters.jl")
+end # module
+using .Parameters
+
+
+module Fields
+using StaticArrays
+
+export SphericalVector, VectorX, VectorY, VectorZ
+export SphericalUnitVector, UnitVectorX, UnitVectorY, UnitVectorZ, Unpolarized
+export T⁽¹⁾, T⁽²⁾, get_tensor_component, tensor_dot
+export ExternalFields, DEFAULT_FIELDS, TEST_FIELDS, generate_fields_scan
+
 include("fields.jl")
+end # module
+using .Fields
 
 """
     State
@@ -87,9 +108,30 @@ function state_to_string(s::State)
     return "|$N, $m_n, $m_i1, $m_i2⟩"
 end
 
-include("matrix_elements.jl")
-include("hamiltonian.jl")
 include("utility.jl")
+
+module Hamiltonian
+import ..MoleculeSpectrum: State, n_hyperfine, index_to_state
+import ..Parameters: MolecularParameters, KRb_Parameters_Neyenhuis
+import ..Fields: ExternalFields, SphericalUnitVector, T⁽¹⁾, T⁽²⁾
+using ..Constants
+using LinearAlgebra, SparseArrays, StaticArrays
+export HamiltonianParts, make_hamiltonian_parts, hamiltonian, make_krb_hamiltonian_parts
+
+module MatrixElements
+import ...MoleculeSpectrum: State
+import WignerSymbols: wigner3j
+export rotation_matrix_element, dipole_matrix_element, nuclear_quadrupole,
+    nuclear_spin_spin, nuclear_spin_rotation, zeeman_rotation, zeeman_nuclear,
+    scalar_polarizability, tensor_polarizability
+
+include("matrix_elements.jl")
+end # module
+using .MatrixElements
+
+include("hamiltonian.jl")
+end #module
+using .Hamiltonian
 
 """
     calculate_spectrum(hamiltonian_parts, external_fields)
@@ -181,7 +223,17 @@ function calculate_spectra_vs_fields(
     return out
 end
 
+module Analysis
+import ..Hamiltonian: HamiltonianParts
+import ..MoleculeSpectrum: State
+import ..Fields: ExternalFields
+
+export find_closest_basis_state
+
 include("analysis.jl")
+end # module
+using .Analysis
+
 include("plotting.jl")
 
 end # module
