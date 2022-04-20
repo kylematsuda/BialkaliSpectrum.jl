@@ -58,31 +58,21 @@ Compute the energies and eigenstates under the external fields.
 To avoid reconstructing the Hamiltonian each time, `hamiltonian_parts` can be reused over calls
 to `get_spectrum`. The output is a `DataFrame`, with the following fields:
 
-`fields`:       value of `external_fields`
-
-`B`:            magnitude of `external_fields.B`
-
-`E`:            magnitude of `external_fields.E`
-
-`index`:        index of the eigenenergy (from lowest to highest energy)
-
-`energy`:       energy of the state (MHz)
-
-`eigenstate`:   vector of state amplitudes
-
-`basis_index`:  the index of nearest basis state (in wavefunction overlap) from `hamiltonian_parts.basis`
-
-`N`:            rotational number `N` of the nearest basis state
-
-`m_n`:          rotational projection `m_n` of the nearest basis state
-
-`I_1`:          nuclear angular momentum `I_1` of the nearest basis state
-
-`m_i1`:         nuclear projection `m_i1` of the nearest basis state
-
-`I_2`:          nuclear angular momentum `I_2` of the nearest basis state
-
-`m_i2`:         nuclear projection `m_i2` of the nearest basis state
+| Field name | Description |
+| ---------- | :----------- |
+| `fields`      | value of `external_fields` |
+| `B`           | magnitude of `external_fields.B` |
+| `E`           | magnitude of `external_fields.E` |
+| `index`       | index of the eigenenergy (from lowest to highest energy) |
+| `energy`      | energy of the state (MHz) |
+| `eigenstate`  | vector of state amplitudes |
+| `basis_index` | the index of nearest basis state (in wavefunction overlap) from `hamiltonian_parts.basis` |
+| `N`           | rotational number `N` of the nearest basis state | 
+| `m_n`         | rotational projection `m_n` of the nearest basis state |
+| `I_1`         | nuclear angular momentum `I_1` of the nearest basis state |
+| `m_i1`        | nuclear projection `m_i1` of the nearest basis state |
+| `I_2`         | nuclear angular momentum `I_2` of the nearest basis state |
+| `m_i2`        | nuclear projection `m_i2` of the nearest basis state |
 
 See also [`get_spectra`](@ref), [`make_hamiltonian_parts`](@ref),
 [`make_krb_hamiltonian_parts`](@ref), [`ExternalFields`](@ref).
