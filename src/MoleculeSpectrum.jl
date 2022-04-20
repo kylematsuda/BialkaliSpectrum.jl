@@ -16,7 +16,6 @@ export SphericalVector, VectorX, VectorY, VectorZ
 export ExternalFields, DEFAULT_FIELDS, TEST_FIELDS, generate_fields_scan
 
 export State, KRbState, basis_state, basis_index, closest_basis_state
-export convert, state_to_string
 
 export HamiltonianParts, make_hamiltonian_parts, hamiltonian, make_krb_hamiltonian_parts
 

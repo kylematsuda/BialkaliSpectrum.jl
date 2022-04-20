@@ -19,6 +19,12 @@ Private = false
 Order = [:type]
 ```
 
+## Standard library interfaces
+```@docs
+convert
+show
+```
+
 ## Methods
 ```@autodocs
 Modules = [MoleculeSpectrum]

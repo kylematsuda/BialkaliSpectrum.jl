@@ -32,24 +32,23 @@ KRbState(N, mₙ, mK, mRb) =
     State(N, mₙ, KRb_Parameters_Neyenhuis.I, [HalfInt(mK) HalfInt(mRb)])
 
 """
-    Base.convert(NamedTuple, s::State)
+    Base.convert(t::Type{NamedTuple}, s::State)
 
 Returns a named tuple with fields `N`, `m_n`, `I_1`, `m_i1`, `I_2`, `m_i2` from `s`.
 
 This is a utility function to simplify outputting to a `DataFrame`.
 """
-Base.convert(t::Type{T}, s::State) where T <: NamedTuple =
+Base.convert(t::Type{NamedTuple}, s::State) =
     (N = s.N, m_n = s.mₙ, I_1 = s.I[1], m_i1 = s.mᵢ[1], I_2 = s.I[2], m_i2 = s.mᵢ[2])
 
 """
-    state_to_string(s::State)
+    Base.show(io::IO, s::State)
 
-Pretty prints a [`State`](@ref).
+Pretty prints a [`State`](@ref) in ket notation, ``|N, m_N, m_{i1}, m_{i2}⟩``.
 """
-function state_to_string(s::State)
-    N, m_n, m_i1, m_i2 = s.N, s.mₙ, s.mᵢ[1], s.mᵢ[2]
-    return "|$N, $m_n, $m_i1, $m_i2⟩"
-end
+Base.show(io::IO, s::State) = print(io, "|$(s.N), $(s.mₙ), $(s.mᵢ[1]), $(s.mᵢ[2])⟩")
+Base.show(io::IO, ::MIME"text/plain", s::State) =
+    print(io, "MoleculeSpectrum.State basis state:\n    ", s)
 
 """
     n_hyperfine(I)
@@ -105,7 +104,7 @@ Returns index of state `s` in the basis.
 The uncoupled basis ``|N, mₙ, I₁, mᵢ₁, I₂, mᵢ₂⟩`` is ordered
 with the quantum numbers on the left changing the slowest.
 
-See also [`State`](@ref), [`index_to_state`](@ref).
+See also [`State`](@ref), [`basis_index`](@ref).
 
 # Examples
 ```jldoctest

@@ -26,6 +26,7 @@ Depth = 2
 ## Internals
 ```@contents
 Pages = ["internals/constants.md",
+    "internals/state.md",
     "internals/matrix_elements.md",
     "internals/hamiltonian.md",
     "internals/fields.md",
