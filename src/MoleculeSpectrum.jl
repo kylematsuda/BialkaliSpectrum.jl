@@ -38,32 +38,8 @@ const h = 6.62607004e-34
 const DVcm⁻¹ToMHz = (DToSI / h) * 1e-4
 end # module
 
-
-# module Parameters
-# using StaticArrays
-# import HalfIntegers: HalfInt
-
-# export ZeemanParameters, NuclearParameters, Polarizability, MolecularParameters
-# export KRb_Zeeman, KRb_Nuclear_Neyenhuis, KRb_Nuclear_Ospelkaus, KRb_Polarizability
-# export KRb_Parameters_Neyenhuis,
-#     KRb_Parameters_Ospelkaus, DEFAULT_MOLECULAR_PARAMETERS, TOY_MOLECULE_PARAMETERS
-
 include("molecular_parameters.jl")
-# end # module
-# using .Parameters
-
-
-# module Fields
-# using StaticArrays
-
-# export SphericalVector, VectorX, VectorY, VectorZ
-# export SphericalUnitVector, UnitVectorX, UnitVectorY, UnitVectorZ, Unpolarized
-# export T⁽¹⁾, T⁽²⁾, get_tensor_component, tensor_dot
-# export ExternalFields, DEFAULT_FIELDS, TEST_FIELDS, generate_fields_scan
-
 include("fields.jl")
-# end # module
-# using .Fields
 
 """
     State
@@ -185,23 +161,8 @@ function state_to_index(s::State)::Int
 end
 
 include("utility.jl")
-
-# module Hamiltonian
-# using LinearAlgebra, SparseArrays, StaticArrays
-# import WignerSymbols: wigner3j
-
-# import ..MoleculeSpectrum: State, n_hyperfine, index_to_state
-# import ..Parameters: MolecularParameters, KRb_Parameters_Neyenhuis
-# import ..Fields: ExternalFields, SphericalUnitVector, T⁽¹⁾, T⁽²⁾
-# using ..Constants
-
-# export HamiltonianParts, make_hamiltonian_parts, hamiltonian, make_krb_hamiltonian_parts
-
 include("matrix_elements.jl")
 include("hamiltonian.jl")
-
-# end #module
-# using .Hamiltonian
 
 """
     calculate_spectrum(hamiltonian_parts, external_fields)
@@ -293,19 +254,7 @@ function calculate_spectra_vs_fields(
     return out
 end
 
-# module Analysis
-# using DataFrames
-
-# import ..Hamiltonian: HamiltonianParts
-# import ..MoleculeSpectrum: State, state_to_index
-# import ..Fields: ExternalFields
-
-# export find_closest_basis_state, find_closest_eigenstate, get_energy, get_energy_difference, get_row_by_state
-
 include("analysis.jl")
-# end # module
-# using .Analysis
-
 include("plotting.jl")
 
 end # module
