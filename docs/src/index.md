@@ -32,6 +32,7 @@ Pages = ["internals/constants.md",
     "internals/hamiltonian.md",
     "internals/fields.md",
     "internals/analysis.md",
+    "internals/dataframe.md",
 ]
 Depth = 2
 ```

@@ -147,14 +147,14 @@ function get_transitions(
 end
 
 """
-    connect_adiabatic(
+    connect_adiabatically(
         spectra;
         groupby=:fields,
         radius::Union{Int,Nothing}=nothing
     )
 
 """
-function connect_adiabatic(
+function connect_adiabatically(
     spectra;
     groupby=:fields,
     radius::Union{Int,Nothing}=nothing

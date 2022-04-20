@@ -13,26 +13,21 @@ export KRb_Parameters_Neyenhuis,
     KRb_Parameters_Ospelkaus, DEFAULT_MOLECULAR_PARAMETERS, TOY_MOLECULE_PARAMETERS
 
 export SphericalVector, VectorX, VectorY, VectorZ
-export SphericalUnitVector, UnitVectorX, UnitVectorY, UnitVectorZ, Unpolarized
-export T⁽¹⁾, T⁽²⁾, get_tensor_component, tensor_dot
 export ExternalFields, DEFAULT_FIELDS, TEST_FIELDS, generate_fields_scan
 
-export State, KRbState, index_to_state, state_to_index
-export order_by_overlap_with,
-    max_overlap_with, find_closest_basis_state, decompose_to_basis_states
-export get_energy, get_energy_difference
+export State, KRbState, index_to_state, state_to_index, find_closest_basis_state 
 
 export HamiltonianParts, make_hamiltonian_parts, hamiltonian, make_krb_hamiltonian_parts
 
 export calculate_spectrum, calculate_spectra_vs_fields
-export calculate_transition_strengths, plot_transition_strengths
-export calculate_transitions_vs_E, plot_transitions_vs_E
+export find_closest_eigenstate, get_energy, get_energy_difference
 
 export filter_rotational, filter_rotational!, filter_hyperfine, filter_hyperfine!,
-    filter_by_state, filter_by_state!
-export expand_fields!, find_closest_eigenstate
+    filter_basis_state, filter_basis_state!, expand_fields!
+export to_wide_format
 
-export get_induced_dipole_moments
+export get_induced_dipole_moments, get_transitions, connect_adiabatically
+export plot_transition_strengths, plot_induced_dipole, plot_states_adiabatic
 
 module Constants
 "Nuclear magneton in MHz/G\n"

@@ -120,7 +120,7 @@ function plot_states_adiabatic(
     groupby=:fields,
     radius::Union{Int,Nothing}=nothing 
 )
-    adiabatized = connect_adiabatic(spectra;
+    adiabatized = connect_adiabatically(spectra;
         groupby=groupby,
         radius=radius
     )
