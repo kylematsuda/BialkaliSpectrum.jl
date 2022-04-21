@@ -438,7 +438,7 @@ function plot_transitions_adiabatic(
     )
 
     groups = DataFrames.groupby(
-        adiabatized,
+        by_strength,
         :max_strength;
         sort=true
     )
