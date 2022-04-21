@@ -1,4 +1,4 @@
-module MoleculeSpectrum
+module BialkaliSpectrum
 
 using LinearAlgebra, SparseArrays, StaticArrays, Test
 import WignerSymbols: wigner3j

@@ -1,12 +1,12 @@
 # push!(LOAD_PATH, "../src/")
 
-using Documenter, MoleculeSpectrum
+using Documenter, BialkaliSpectrum
 
-DocMeta.setdocmeta!(MoleculeSpectrum, :DocTestSetup, :(using MoleculeSpectrum); recursive=true)
+DocMeta.setdocmeta!(BialkaliSpectrum, :DocTestSetup, :(using BialkaliSpectrum); recursive=true)
 
 makedocs(
-    sitename = "MoleculeSpectrum documentation",
-    modules = [MoleculeSpectrum],
+    sitename = "BialkaliSpectrum documentation",
+    modules = [BialkaliSpectrum],
     doctest = true,
     clean = true,
     format = Documenter.HTML(prettyurls = false),

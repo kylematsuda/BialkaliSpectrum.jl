@@ -1,5 +1,5 @@
 ```@meta
-CurrentModule = MoleculeSpectrum
+CurrentModule = BialkaliSpectrum
 ```
 
 # Setting up a calculation
@@ -23,7 +23,7 @@ of the molecule.
 
 ### Types
 ```@autodocs
-Modules = [MoleculeSpectrum]
+Modules = [BialkaliSpectrum]
 Pages = ["molecular_parameters.jl"]
 Private = false
 Order = [:type]
@@ -31,7 +31,7 @@ Order = [:type]
 
 ### Constants
 ```@autodocs
-Modules = [MoleculeSpectrum]
+Modules = [BialkaliSpectrum]
 Pages = ["molecular_parameters.jl"]
 Private = false
 Order = [:constant]
@@ -47,7 +47,7 @@ terms in the Hamiltonian separately.
 
 ### Types
 ```@autodocs
-Modules = [MoleculeSpectrum]
+Modules = [BialkaliSpectrum]
 Pages = ["hamiltonian.jl"]
 Private = false
 Order = [:type]
@@ -55,7 +55,7 @@ Order = [:type]
 
 ### Methods
 ```@autodocs
-Modules = [MoleculeSpectrum]
+Modules = [BialkaliSpectrum]
 Pages = ["hamiltonian.jl"]
 Private = false
 Order = [:function]
@@ -76,7 +76,7 @@ and can be generated manually or with [`generate_fields_scan`](@ref).
 
 ### Types
 ```@autodocs
-Modules = [MoleculeSpectrum]
+Modules = [BialkaliSpectrum]
 Pages = ["fields.jl"]
 Private = false
 Order = [:type]
@@ -84,7 +84,7 @@ Order = [:type]
 
 ### Methods
 ```@autodocs
-Modules = [MoleculeSpectrum]
+Modules = [BialkaliSpectrum]
 Pages = ["fields.jl"]
 Private = false
 Order = [:function]
@@ -111,7 +111,7 @@ and the corresponding basis [`State`](@ref).
 
 ### Types
 ```@autodocs
-Modules = [MoleculeSpectrum]
+Modules = [BialkaliSpectrum]
 Pages = ["state.jl"]
 Private = false
 Order = [:type]
@@ -125,7 +125,7 @@ show
 
 ### Methods
 ```@autodocs
-Modules = [MoleculeSpectrum]
+Modules = [BialkaliSpectrum]
 Pages = ["state.jl"]
 Private = false
 Order = [:function]
@@ -137,11 +137,11 @@ Constants and method defs for working with specific molecule species.
 
 ### ``{}^{40}\text{K}^{87}\text{Rb}`` (`K40Rb87`)
 ```@autodocs
-Modules = [MoleculeSpectrum.K40Rb87]
+Modules = [BialkaliSpectrum.K40Rb87]
 ```
 
 ### Toy molecule without hyperfine structure (`Toy`)
 ```@autodocs
-Modules = [MoleculeSpectrum.Toy]
+Modules = [BialkaliSpectrum.Toy]
 ```
 
