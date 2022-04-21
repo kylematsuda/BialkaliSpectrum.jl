@@ -86,7 +86,7 @@ function plot_induced_dipole(
     )
 end
 
-function plot_induced_dipole(spectra; groupby=:fields, adiabatic=adiabatic)
+function plot_induced_dipole(spectra; groupby=:fields, adiabatic=true)
     f = Figure(fontsize = 18)
 
     if groupby == :E
