@@ -9,7 +9,9 @@ makedocs(
     modules = [BialkaliSpectrum],
     doctest = true,
     clean = true,
-    format = Documenter.HTML(prettyurls = false),
+    format = Documenter.HTML(
+        prettyurls = get(ENV, "CI", nothing) == "true"
+    ),
     pages = Any[
         "Introduction" => "index.md",
         "Test" => "man/basics.md",
@@ -23,6 +25,7 @@ makedocs(
 
 deploydocs(
     repo = "github.com/kylematsuda/BialkaliSpectrum.jl.git",
+    versions = nothing
 )
 
 
