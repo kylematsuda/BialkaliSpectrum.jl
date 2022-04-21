@@ -24,7 +24,9 @@ function plot_transition_strengths(
     groupby=:E,
     tol=0.5,
     restrict_N=true,
+    keep_negatives=true,
     cutoff::Union{Float64,Nothing}=1e-3,
+    normalization=1/sqrt(3)
 )
     df = transitions(
         spectrum,
@@ -34,7 +36,9 @@ function plot_transition_strengths(
         groupby=groupby,
         tol=tol,
         restrict_N=restrict_N,
+        keep_negatives=keep_negatives,
         cutoff=cutoff,
+        normalization=normalization,
     )
     return plot_transition_strengths(df; groupby=groupby)
 end
