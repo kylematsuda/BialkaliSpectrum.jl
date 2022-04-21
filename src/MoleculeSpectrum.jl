@@ -24,7 +24,7 @@ export filter_rotational, filter_rotational!, filter_hyperfine, filter_hyperfine
 export wide_format
 
 export induced_dipole_moments, transitions, adiabatic
-export plot_transition_strengths, plot_induced_dipole
+export plot_transition_strengths, plot_induced_dipole, plot_transition_dipole
 export plot_states_adiabatic, plot_states_adiabatic_weighted, plot_transitions_adiabatic
 
 module Constants

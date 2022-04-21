@@ -67,7 +67,7 @@ const KRb_Parameters_Ospelkaus = MolecularParameters(
 )
 
 """
-    make_krb_hamiltonian_parts(N_max)
+    make_krb_hamiltonian_parts(N_max::Int)
 
 Construct all parts of the ``{}^{40}\\text{K}^{87}\\text{Rb}`` Hamiltonian
 that do not depend on external fields.
@@ -103,7 +103,8 @@ import ..MoleculeSpectrum: ZeemanParameters, Polarizability, NuclearParameters,
     MolecularParameters, State,
     generate_basis, SparseHamiltonian, HamiltonianParts,
     h_rotation, h_dipole,
-    h_diagonal, h_rank_1, h_rank_2
+    h_diagonal, h_rank_1, h_rank_2,
+    make_hamiltonian_parts
 
 export make_toy_hamiltonian_parts, State
 
@@ -123,7 +124,7 @@ const TOY_PARAMETERS = MolecularParameters(
 )
 
 """
-    make_toy_hamiltonian_parts(N_max)
+    make_toy_hamiltonian_parts(N_max::Int)
 
 Construct all parts of the toy molecule Hamiltonian
 that do not depend on external fields.

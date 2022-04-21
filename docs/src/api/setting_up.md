@@ -142,6 +142,6 @@ Modules = [MoleculeSpectrum.K40Rb87]
 
 ### Toy molecule without hyperfine structure (`Toy`)
 ```@autodocs
-Modules = [MoleculeSpectrum.K40Rb87]
+Modules = [MoleculeSpectrum.Toy]
 ```
 
