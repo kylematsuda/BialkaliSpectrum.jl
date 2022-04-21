@@ -7,7 +7,7 @@ import DataFrames
 import ProgressMeter
 using CairoMakie
 
-export ZeemanParameters, NuclearParameters, Polarizability, MolecularParameters, TOY_MOLECULE_PARAMETERS
+export ZeemanParameters, NuclearParameters, Polarizability, MolecularParameters
 
 export SphericalVector, VectorX, VectorY, VectorZ
 export ExternalFields, DEFAULT_FIELDS, TEST_FIELDS, generate_fields_scan
@@ -24,7 +24,7 @@ export filter_rotational, filter_rotational!, filter_hyperfine, filter_hyperfine
 export wide_format
 
 export induced_dipole_moments, transitions, adiabatic
-export plot_transition_strengths, plot_induced_dipole
+export plot_transition_strengths, plot_induced_dipole, plot_transition_dipole
 export plot_states_adiabatic, plot_states_adiabatic_weighted, plot_transitions_adiabatic
 
 module Constants

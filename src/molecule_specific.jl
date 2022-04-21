@@ -67,7 +67,7 @@ const KRb_Parameters_Ospelkaus = MolecularParameters(
 )
 
 """
-    make_krb_hamiltonian_parts(N_max)
+    make_krb_hamiltonian_parts(N_max::Int)
 
 Construct all parts of the ``{}^{40}\\text{K}^{87}\\text{Rb}`` Hamiltonian
 that do not depend on external fields.
@@ -95,3 +95,73 @@ KRbState(N, mₙ, mK, mRb) =
 
 end # module
 using .K40Rb87
+
+module Toy
+
+import HalfIntegers: HalfInt
+import ..MoleculeSpectrum: ZeemanParameters, Polarizability, NuclearParameters,
+    MolecularParameters, State,
+    generate_basis, SparseHamiltonian, HamiltonianParts,
+    h_rotation, h_dipole,
+    h_diagonal, h_rank_1, h_rank_2,
+    make_hamiltonian_parts
+
+export make_toy_hamiltonian_parts, State
+
+"""
+    TOY_PARAMETERS
+
+Toy model values with dipole = 1 D and no hyperfine structure.
+Intended for testing.
+"""
+const TOY_PARAMETERS = MolecularParameters(
+    1.0, # d_p
+    1.0, # B_r
+    [HalfInt(0), HalfInt(0)],
+    ZeemanParameters(0.0, [0.0, 0.0], [0.0, 0.0]),
+    NuclearParameters([0.0, 0.0], [0.0, 0.0], 0.0),
+    Polarizability(0.0, 0.0),
+)
+
+"""
+    make_toy_hamiltonian_parts(N_max::Int)
+
+Construct all parts of the toy molecule Hamiltonian
+that do not depend on external fields.
+
+The rotational states `0:N_max` are included. This is a shortcut method that
+replaces [`make_hamiltonian_parts`](@ref) for the toy molecule.
+
+See also [`make_hamiltonian_parts`](@ref).
+"""
+function make_toy_hamiltonian_parts(N_max::Int)::HamiltonianParts
+    basis = generate_basis(TOY_PARAMETERS, N_max)
+
+    rotation = TOY_PARAMETERS.Bᵣ * h_rotation(basis)
+    dipole_relative = h_dipole(basis)
+    dipole = (-1) * TOY_PARAMETERS.dₚ * h_dipole(basis)
+
+    return HamiltonianParts(
+        basis,
+        rotation,
+        dipole,
+        dipole_relative,
+        h_diagonal(basis, (_, _) -> 0),
+        h_rank_1(basis, (_, _, _) -> 0),
+        h_diagonal(basis, (_, _) -> 0),
+        h_rank_2(basis, (_, _, _) -> 0),
+    )
+end
+
+"""
+    State(N, mₙ)
+
+Creates a basis state ``|N, m_n⟩`` for the toy molecule.
+
+This is a wrapper around [`State`](@ref) to avoid having to specify the nuclear spins ``I_k`` each time.
+
+See also [`State`](@ref).
+"""
+State(N, m_n) = State(N, m_n, [0, 0], [0, 0])
+
+end # module
