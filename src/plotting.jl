@@ -164,7 +164,7 @@ function plot_transition_dipole(
     spectra,
     initial_state::State,
     p::Int;
-    groupby=:fields,
+    groupby=:E,
     adiabatic=adiabatic
 )
     f = Figure(fontsize = 18)
@@ -222,7 +222,7 @@ end
 """
 function plot_states_adiabatic(
     spectra;
-    groupby=:fields,
+    groupby=:E,
     radius::Union{Int,Nothing}=nothing 
 )
     adiabatized = adiabatic(spectra;
