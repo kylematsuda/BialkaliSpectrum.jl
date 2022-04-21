@@ -115,6 +115,7 @@ end
         groupby=:fields,
         tol=0.5,
         restrict_N=true,
+        keep_negatives=true,
         cutoff::Union{Float64,Nothing}=1e-3
     )
 
@@ -127,8 +128,9 @@ function transitions(
     groupby=:fields,
     tol=0.5,
     restrict_N=true,
+    keep_negatives=true,
     cutoff::Union{Float64,Nothing}=1e-3,
-    normalization=1/3
+    normalization=1/sqrt(3)
 )
 
     function make_transitions(df)
@@ -138,9 +140,15 @@ function transitions(
         g_energy = g_row.energy
         g_ev = g_row.eigenstate
 
+        if keep_negatives
+            diff = en -> abs(en - g_energy)
+        else
+            diff = en -> en - g_energy
+        end
+
         out = DataFrames.transform(df,
             :energy => 
-                DataFrames.ByRow(en -> en - g_energy) => 
+                DataFrames.ByRow(diff) => 
                     :transition_frequency
         )
         DataFrames.transform!(out,
@@ -155,7 +163,9 @@ function transitions(
         )
         DataFrames.transform!(out,
             [:d_minus, :d_0, :d_plus] =>
-                DataFrames.ByRow((dm, d0, dp) -> (1/normalization) * abs2.([dm, d0, dp]) |> sum)
+                DataFrames.ByRow((dm, d0, dp) ->
+                    (abs2.([dm, d0, dp]) |> sum |> sqrt) / normalization
+                )
                     => :transition_strength
         )
     end
@@ -174,13 +184,26 @@ function transitions(
 
     if frequency_range !== nothing
         DataFrames.filter!(
-            :transition_frequency => f -> f >= frequency_range[1] && f <= frequency_range[2],
+            :transition_frequency =>
+                f -> f >= frequency_range[1] && f <= frequency_range[2],
+            transformed
+        )
+    else
+        # Remove negative transition frequencies
+        # If keep_negatives == true, then any transitions with lower states
+        # will have taken abs of
+        DataFrames.filter!(
+            :transition_frequency =>
+                f -> f >= 0,
             transformed
         )
     end
 
     if restrict_N
-        DataFrames.filter!(:N => n -> n == ground_basis_state.N + 1,
+        DataFrames.filter!(
+            :N =>
+                n -> n == ground_basis_state.N + 1 ||
+                    n === ground_basis_state.N - 1,
             transformed
         )
     end
