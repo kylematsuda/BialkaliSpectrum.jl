@@ -2,7 +2,11 @@
 
 using Documenter, BialkaliSpectrum
 
-DocMeta.setdocmeta!(BialkaliSpectrum, :DocTestSetup, :(using BialkaliSpectrum); recursive=true)
+DocMeta.setdocmeta!(BialkaliSpectrum,
+    :DocTestSetup,
+    :(using BialkaliSpectrum);
+    recursive=true
+)
 
 makedocs(
     sitename = "BialkaliSpectrum documentation",
