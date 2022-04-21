@@ -126,12 +126,6 @@ Base.:-(uv::SphericalUnitVector) = SphericalUnitVector(π - uv.θ, uv.φ + π)
     UnitVectorX()
 
 Construct a [`SphericalUnitVector`](@ref) along `x`.
-
-# Examples
-```jldoctest
-julia> UnitVectorX()
-SphericalUnitVector(1.5707963267948966, 0.0)
-```
 """
 UnitVectorX() = SphericalUnitVector(π / 2, 0)
 
@@ -139,12 +133,6 @@ UnitVectorX() = SphericalUnitVector(π / 2, 0)
     UnitVectorY()
 
 Construct a [`SphericalUnitVector`](@ref) along `y`.
-
-# Examples
-```jldoctest
-julia> UnitVectorY()
-SphericalUnitVector(1.5707963267948966, 1.5707963267948966)
-```
 """
 UnitVectorY() = SphericalUnitVector(π / 2, π / 2)
 
@@ -152,44 +140,13 @@ UnitVectorY() = SphericalUnitVector(π / 2, π / 2)
     UnitVectorZ()
 
 Construct a [`SphericalUnitVector`](@ref) along `z`.
-
-# Examples
-```jldoctest
-julia> UnitVectorZ()
-SphericalUnitVector(0.0, 0.0)
-```
 """
 UnitVectorZ() = SphericalUnitVector(0, 0)
 
 """
     T⁽¹⁾(v)
 
-Construct the components of the rank 1 spherical tensor ``T⁽¹⁾(v)``.
-
-# Examples
-```jldoctest
-julia> T⁽¹⁾(UnitVectorX())
-3-element StaticArrays.SVector{3, ComplexF64} with indices SOneTo(3):
-    0.7071067811865475 - 0.0im
- 6.123233995736766e-17 + 0.0im
-   -0.7071067811865475 - 0.0im
-```
-
-```jldoctest
-julia> T⁽¹⁾(UnitVectorY())
-3-element StaticArrays.SVector{3, ComplexF64} with indices SOneTo(3):
-  4.329780281177466e-17 - 0.7071067811865475im
-  6.123233995736766e-17 + 0.0im
- -4.329780281177466e-17 - 0.7071067811865475im
-```
-
-```jldoctest
-julia> T⁽¹⁾(UnitVectorZ())
-3-element StaticArrays.SVector{3, ComplexF64} with indices SOneTo(3):
-  0.0 - 0.0im
-  1.0 + 0.0im
- -0.0 - 0.0im
-```
+Construct the components of the rank 1 spherical tensor ``T⁽¹⁾(v)``.
 """
 function T⁽¹⁾(v::SphericalUnitVector)::SVector{3,ComplexF64}
     θ = v.θ
@@ -209,37 +166,6 @@ end
     T⁽²⁾(v)
 
 Construct the components of the rank 2 spherical tensor ``T⁽²⁾(v, v)``.
-
-# Examples
-```jldoctest
-julia> T⁽²⁾(UnitVectorX())
-5-element StaticArrays.SVector{5, ComplexF64} with indices SOneTo(5):
-                    0.5 - 0.0im
-  6.123233995736766e-17 - 0.0im
-    -0.4082482904638631 + 0.0im
- -6.123233995736766e-17 - 0.0im
-                    0.5 + 0.0im
-```
-
-```jldoctest
-julia> T⁽²⁾(UnitVectorY())
-5-element StaticArrays.SVector{5, ComplexF64} with indices SOneTo(5):
-                   -0.5 - 6.123233995736766e-17im
-  3.749399456654644e-33 - 6.123233995736766e-17im
-    -0.4082482904638631 + 0.0im
- -3.749399456654644e-33 - 6.123233995736766e-17im
-                   -0.5 + 6.123233995736766e-17im
-```
-
-```jldoctest
-julia> T⁽²⁾(UnitVectorZ())
-5-element StaticArrays.SVector{5, ComplexF64} with indices SOneTo(5):
-                0.0 - 0.0im
-                0.0 - 0.0im
- 0.8164965809277261 + 0.0im
-               -0.0 - 0.0im
-                0.0 + 0.0im
-```
 """
 function T⁽²⁾(v::SphericalUnitVector)::SVector{5,ComplexF64}
     θ = v.θ

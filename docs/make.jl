@@ -2,14 +2,20 @@
 
 using Documenter, BialkaliSpectrum
 
-DocMeta.setdocmeta!(BialkaliSpectrum, :DocTestSetup, :(using BialkaliSpectrum); recursive=true)
+DocMeta.setdocmeta!(BialkaliSpectrum,
+    :DocTestSetup,
+    :(using BialkaliSpectrum);
+    recursive=true
+)
 
 makedocs(
     sitename = "BialkaliSpectrum documentation",
     modules = [BialkaliSpectrum],
     doctest = true,
     clean = true,
-    format = Documenter.HTML(prettyurls = false),
+    format = Documenter.HTML(
+        prettyurls = get(ENV, "CI", nothing) == "true"
+    ),
     pages = Any[
         "Introduction" => "index.md",
         "Test" => "man/basics.md",
@@ -20,3 +26,11 @@ makedocs(
     ],
     # strict = true
 )
+
+deploydocs(
+    repo = "github.com/kylematsuda/BialkaliSpectrum.jl.git",
+    devbranch = "main",
+    push_preview = true,
+)
+
+

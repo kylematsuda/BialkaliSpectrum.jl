@@ -61,12 +61,14 @@ See also [`State`](@ref), [`basis_index`](@ref).
 # Examples
 ```jldoctest
 julia> s = basis_state(1, 4, 3/2)
-State(0, 0, HalfIntegers.Half{Int64}[4, 3/2], HalfIntegers.Half{Int64}[-4, -3/2])
+BialkaliSpectrum.State basis state:
+    |0, 0, -4, -3/2⟩
 ```
 
 ```jldoctest
 julia> s = basis_state(37, 4, 3/2)
-State(1, -1, HalfIntegers.Half{Int64}[4, 3/2], HalfIntegers.Half{Int64}[-4, -3/2])
+BialkaliSpectrum.State basis state:
+    |1, -1, -4, -3/2⟩
 ```
 """
 function basis_state(i::Int, I₁, I₂)::State
@@ -96,6 +98,8 @@ See also [`State`](@ref), [`basis_index`](@ref).
 
 # Examples
 ```jldoctest
+julia> import BialkaliSpectrum.K40Rb87: KRbState
+
 julia> basis_index(KRbState(1, 1, -4, 1/2))
 111
 ```
