@@ -1,10 +1,13 @@
-# BialkaliSpectrum documentation
+# BialkaliSpectrum.jl
 
-This package contains code for calculating the energy spectrum of diatomic bialkali molecules... blah blah blah
+Calculate the energy levels of diatomic
+$${}^{1} \Sigma^+$$
+molecules in magnetic, electric, and optical fields.
 
-## Package Manual
+## Manual
 ```@contents
 Pages = ["man/basics.md",
+    "man/worked_example.md",
 ]
 Depth = 2
 ```

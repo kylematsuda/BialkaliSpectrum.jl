@@ -9,7 +9,7 @@ DocMeta.setdocmeta!(BialkaliSpectrum,
 )
 
 makedocs(
-    sitename = "BialkaliSpectrum documentation",
+    sitename = "BialkaliSpectrum.jl",
     modules = [BialkaliSpectrum],
     doctest = true,
     clean = true,
@@ -17,8 +17,11 @@ makedocs(
         prettyurls = get(ENV, "CI", nothing) == "true"
     ),
     pages = Any[
-        "Introduction" => "index.md",
-        "Test" => "man/basics.md",
+        "Home" => "index.md",
+        "Guide" => Any[
+            "man/basics.md",
+            "man/worked_example.md",
+        ],
         "API" => Any[
             "Setting up a calculation" => "api/setting_up.md",
             "Analyzing the results" => "api/analyzing_spectrum.md"
