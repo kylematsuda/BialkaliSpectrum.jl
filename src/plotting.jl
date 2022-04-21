@@ -121,6 +121,99 @@ function plot_induced_dipole(spectra; groupby=:fields, adiabatic=adiabatic)
 end
 
 """
+    plot_transition_dipole(
+        spectra,
+        hamiltonian_parts::HamiltonianParts,
+        initial_state::State,
+        p::Int;
+        groupby=:fields
+    )
+
+    plot_transition_dipole(
+        spectra,
+        p::Int,
+        groupby=:fields
+    )
+
+"""
+function plot_transition_dipole(
+    spectra,
+    hamiltonian_parts::HamiltonianParts,
+    initial_state::State,
+    p::Int;
+    groupby=:E,
+    adiabatic=true,
+)
+    return plot_transition_dipole(
+        transitions(
+            spectra,
+            hamiltonian_parts,
+            initial_state;
+            groupby=groupby,
+            restrict_N=false,
+            cutoff=nothing
+        ),
+        initial_state,
+        p;
+        groupby=groupby,
+        adiabatic=adiabatic
+    )
+end
+
+function plot_transition_dipole(
+    spectra,
+    initial_state::State,
+    p::Int;
+    groupby=:fields,
+    adiabatic=adiabatic
+)
+    f = Figure(fontsize = 18)
+
+    if groupby == :E
+        xlabel = "E (V/cm)"
+    elseif groupby == :B
+        xlabel = "B (G)"
+    else
+        xlabel = "$groupby"
+    end
+
+    ax = Axis(f[1, 1], xlabel=xlabel, ylabel="Transition dipole / permanent dipole")
+
+    if adiabatic
+        key = :adiabatic_index
+    else
+        key = :index
+    end
+
+    if p == -1
+        d = :d_minus
+    elseif p == 0
+        d = :d_0
+    else
+        d = :d_plus
+    end
+
+    df = DataFrames.groupby(spectra, key)
+
+    for group in df
+        DataFrames.sort!(group, groupby)
+
+        firstrow = first(group)
+
+        if !(firstrow.N == initial_state.N &&
+            firstrow.m_n == initial_state.mₙ &&
+            firstrow.m_i1 == initial_state.mᵢ[1] &&
+            firstrow.m_i2 == initial_state.mᵢ[2])
+
+            lines!(group.E, abs.(group[!, d]), label = "$(firstrow.N), $(firstrow.m_n)")
+        end
+    end
+
+    Legend(f[1, 2], ax, "States", framevisible = true)
+    return f
+end
+
+"""
     plot_states_adiabatic(
         spectra;
         groupby=:E,
