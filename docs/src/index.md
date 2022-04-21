@@ -1,4 +1,4 @@
-# MoleculeSpectrum documentation
+# BialkaliSpectrum documentation
 
 This package contains code for calculating the energy spectrum of diatomic bialkali molecules... blah blah blah
 

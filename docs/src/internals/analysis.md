@@ -1,5 +1,5 @@
 ```@meta
-CurrentModule = MoleculeSpectrum
+CurrentModule = BialkaliSpectrum
 ```
 
 # Analysis
@@ -10,7 +10,7 @@ Pages = ["analysis.md"]
 
 ## Types
 ```@autodocs
-Modules = [MoleculeSpectrum]
+Modules = [BialkaliSpectrum]
 Pages = ["analysis.jl"]
 Public = false
 Order = [:type]
@@ -18,7 +18,7 @@ Order = [:type]
 
 ## Methods
 ```@autodocs
-Modules = [MoleculeSpectrum]
+Modules = [BialkaliSpectrum]
 Pages = ["analysis.jl"]
 Public = false
 Order = [:function]

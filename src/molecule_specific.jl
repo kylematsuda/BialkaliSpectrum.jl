@@ -1,7 +1,7 @@
 module K40Rb87
 
 import HalfIntegers: HalfInt
-import ..MoleculeSpectrum: ZeemanParameters, Polarizability, NuclearParameters,
+import ..BialkaliSpectrum: ZeemanParameters, Polarizability, NuclearParameters,
     MolecularParameters, make_hamiltonian_parts, State
 
 export KRb_Zeeman, KRb_Nuclear_Neyenhuis, KRb_Nuclear_Ospelkaus, KRb_Polarizability
@@ -99,7 +99,7 @@ using .K40Rb87
 module Toy
 
 import HalfIntegers: HalfInt
-import ..MoleculeSpectrum: ZeemanParameters, Polarizability, NuclearParameters,
+import ..BialkaliSpectrum: ZeemanParameters, Polarizability, NuclearParameters,
     MolecularParameters, State,
     generate_basis, SparseHamiltonian, HamiltonianParts,
     h_rotation, h_dipole,

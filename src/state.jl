@@ -36,7 +36,7 @@ Pretty prints a [`State`](@ref) in ket notation, ``|N, m_N, m_{i1}, m_{i2}⟩``.
 """
 Base.show(io::IO, s::State) = print(io, "|$(s.N), $(s.mₙ), $(s.mᵢ[1]), $(s.mᵢ[2])⟩")
 Base.show(io::IO, ::MIME"text/plain", s::State) =
-    print(io, "MoleculeSpectrum.State basis state:\n    ", s)
+    print(io, "BialkaliSpectrum.State basis state:\n    ", s)
 
 """
     n_hyperfine(I)

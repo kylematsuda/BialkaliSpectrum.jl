@@ -1,5 +1,5 @@
 ```@meta
-CurrentModule = MoleculeSpectrum
+CurrentModule = BialkaliSpectrum
 ```
 
 # Hamiltonian
@@ -10,7 +10,7 @@ Pages = ["hamiltonian.md"]
 
 ## Types
 ```@autodocs
-Modules = [MoleculeSpectrum]
+Modules = [BialkaliSpectrum]
 Pages = ["hamiltonian.jl"]
 Public = false
 Order = [:type]
@@ -18,7 +18,7 @@ Order = [:type]
 
 ## Methods
 ```@autodocs
-Modules = [MoleculeSpectrum]
+Modules = [BialkaliSpectrum]
 Pages = ["hamiltonian.jl"]
 Public = false
 Order = [:function]

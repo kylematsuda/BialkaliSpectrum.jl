@@ -1,5 +1,5 @@
 ```@meta
-CurrentModule = MoleculeSpectrum
+CurrentModule = BialkaliSpectrum
 ```
 
 # Analyzing the results
@@ -56,7 +56,7 @@ Anything more complicated should use the methods in the
 
 ### Methods
 ```@autodocs
-Modules = [MoleculeSpectrum]
+Modules = [BialkaliSpectrum]
 Pages = ["dataframe.jl"]
 Private = false
 Order = [:function]
@@ -69,7 +69,7 @@ Functions for analyzing the output of [`get_spectrum`](@ref) or
 
 ### Methods
 ```@autodocs
-Modules = [MoleculeSpectrum]
+Modules = [BialkaliSpectrum]
 Pages = ["analysis.jl"]
 Private = false
 Order = [:function]
@@ -86,7 +86,7 @@ pop-up window.
 
 ### Methods
 ```@autodocs
-Modules = [MoleculeSpectrum]
+Modules = [BialkaliSpectrum]
 Pages = ["plotting.jl"]
 Private = false
 Order = [:function]

@@ -1,5 +1,5 @@
 ```@meta
-CurrentModule = MoleculeSpectrum
+CurrentModule = BialkaliSpectrum
 ```
 
 # Constants
@@ -11,6 +11,6 @@ Pages = ["constants.md"]
 ## Constants
 
 ```@autodocs
-Modules = [MoleculeSpectrum.Constants]
+Modules = [BialkaliSpectrum.Constants]
 Public = false
 ```
