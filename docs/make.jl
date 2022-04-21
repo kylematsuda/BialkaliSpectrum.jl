@@ -29,7 +29,8 @@ makedocs(
 
 deploydocs(
     repo = "github.com/kylematsuda/BialkaliSpectrum.jl.git",
-    versions = nothing
+    devbranch = "main",
+    push_preview = true,
 )
 
 
