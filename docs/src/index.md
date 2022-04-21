@@ -7,6 +7,7 @@ molecules in magnetic, electric, and optical fields.
 ## Manual
 ```@contents
 Pages = ["man/basics.md",
+    "man/worked_example.md",
 ]
 Depth = 2
 ```

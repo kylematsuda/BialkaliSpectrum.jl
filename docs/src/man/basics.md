@@ -230,7 +230,7 @@ you'll need to add `ElectronDisplay.jl`,
 julia> using ElectronDisplay
 ```
 
-Then, run the following method,
+Then, run the following line,
 
 ```julia
 julia> plot_transition_strengths(spectrum, parts, KRbState(0, 0, -4, 1/2))
@@ -246,6 +246,7 @@ These are the transitions coming out of our chosen state `KRbState(0, 0, -4, 1/2
 as a function of the transition frequency.
 The height of the lines is the strength of their transition dipole, 
 normalized to ``d_\text{perm} / \sqrt{3}``.
+All three polarizations, ``\pi``, ``\sigma^+`` and ``\sigma^-``, are shown.
 
 By default, [`plot_transition_strengths`](@ref) only plots transitions with a 
 relative strength (`cutoff`) greater than `1e-3`.
@@ -261,6 +262,30 @@ which gives a plot like this:
 Check out the docs for [`plot_transition_strengths`](@ref) for a full list of the
 allowed keyword arguments.
 
+What if we want to plot the transitions out of ``N = 1`` instead?
+
+```julia
+julia> plot_transition_strengths(spectrum, parts, KRbState(1, 0, -4, 1/2))
+```
+
+This produces a weird-looking plot:
+
+![](basics_thirdplot.png)
+
+[`plot_transition_strengths`](@ref) plots transitions to both higher and lower states
+by default, so we are seeing transition to both the ``N = 0`` and ``N = 2`` manifolds.
+To make things clearer, we can supply the `frequency_range` parameter,
+which we have omitted so far. For example, if we want to plot the ``N = 2`` transitions,
+
+```julia
+julia> plot_transition_strengths(spectrum, parts, KRbState(1, 0, -4, 1/2), [4000, 5000])
+```
+
+This produces the following image:
+
+![](basics_fourthplot.png)
+
+
 !!! tip "hamiltonian_parts"
 
     Note that [`plot_transition_strengths`](@ref) takes `parts` as a parameter 
@@ -273,3 +298,83 @@ allowed keyword arguments.
     `hamiltonian_parts` as an argument. This variant assumes that you are passing in a
     `DataFrame` with the requisite fields already defined (coming from e.g., the output
     of [`transitions`](@ref)).
+
+## Scanning the external fields
+
+So far, we have shown a few examples of what we can do with the spectrum calculated
+for some particular value of the external fields.
+But we often want to calculate some property of the molecules as the external fields
+are changed.
+
+To do this, we will use a vector of `ExternalField`s instead of a single one,
+
+```jldoctest bialkali
+julia> fields = generate_fields_scan(545.9, 0.0:1000.0:10000.0, [[]]);
+```
+
+This produces a `Vector{ExternalFields}` with a constant magnetic field of
+545.9 G, a constant optical intensity of zero, and electric field strength
+increasing from 0 V/cm to 10 kV/cm in steps of 1 kV/cm.
+
+Next, we call [`get_spectra`](@ref) to calculate the spectrum at each field configuration,
+
+```julia
+julia> spectra = get_spectra(parts, fields, df -> filter_rotational(df, [0, 1]))
+
+Progress: 100%|█████████████████████████████████████████| Time: 0:00:06
+1584×13 DataFrame
+  Row │ fields                             index  energy       eigenstate      ⋯
+      │ External…                          Int64  Float64      SubArray…       ⋯
+──────┼─────────────────────────────────────────────────────────────────────────
+    1 │ ExternalFields(SphericalVector(5…      1    -1.6672    ComplexF64[3.97 ⋯
+    2 │ ExternalFields(SphericalVector(5…      2    -1.53563   ComplexF64[-8.1
+    3 │ ExternalFields(SphericalVector(5…      3    -1.40404   ComplexF64[4.08
+    4 │ ExternalFields(SphericalVector(5…      4    -1.27245   ComplexF64[-6.9
+    5 │ ExternalFields(SphericalVector(5…      5    -1.14086   ComplexF64[0.0- ⋯
+    6 │ ExternalFields(SphericalVector(5…      6    -1.00925   ComplexF64[0.0-
+    7 │ ExternalFields(SphericalVector(5…      7    -0.914827  ComplexF64[4.87
+    8 │ ExternalFields(SphericalVector(5…      8    -0.877637  ComplexF64[0.0-
+  ⋮   │                 ⋮                    ⋮         ⋮                       ⋱
+ 1578 │ ExternalFields(SphericalVector(5…    138  2681.32      ComplexF64[2.41 ⋯
+ 1579 │ ExternalFields(SphericalVector(5…    139  2681.38      ComplexF64[2.66
+ 1580 │ ExternalFields(SphericalVector(5…    140  2681.45      ComplexF64[2.02
+ 1581 │ ExternalFields(SphericalVector(5…    141  2681.59      ComplexF64[-6.3
+ 1582 │ ExternalFields(SphericalVector(5…    142  2681.74      ComplexF64[6.12 ⋯
+ 1583 │ ExternalFields(SphericalVector(5…    143  2681.89      ComplexF64[5.73
+ 1584 │ ExternalFields(SphericalVector(5…    144  2682.04      ComplexF64[1.61
+                                                10 columns and 1569 rows omitted
+
+```
+
+Notice that we passed a third parameter to [`get_spectra`](@ref), an anonymous function
+`df -> filter_rotational(df, [0, 1])`.
+The third argument of [`get_spectra`](@ref) is a closure that is evaluated on
+the spectrum obtained at each field configuration before adding it to the output
+`DataFrame`.
+In this case, we just applied a filter that removes all of the rows from the output
+except those corresponding to states with ``N \leq 1``.
+
+!!! tip "Removing unneeded states"
+
+    For field scans containing hundreds of points and many rotational levels,
+    the amount of rows stored in the `DataFrame` can quickly become very large.
+    In these cases, it can sometimes speed up the calculation quite a bit to
+    throw away the unneeded states as soon as possible, as shown in the previous
+    example.
+
+As an example, let's plot the energies as a function of the electric field:
+
+```julia
+julia> plot_states_adiabatic(spectra; groupby=:E)
+```
+
+The following plot should pop up on your screen:
+
+![](basics_fifthplot.png)
+
+The "fuzziness" of the lines is because there are 36 hyperfine states per rotational state,
+which all have the same Stark shift.
+
+Hopefully this is enough to get started!
+See the [Public API](@ref) docs for more details.
+We'll add a more complete example calculation at some point here: [Example: dipole moments vs E](@ref).
