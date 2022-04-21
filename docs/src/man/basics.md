@@ -32,7 +32,7 @@ julia> using BialkaliSpectrum.K40Rb87 # optional, brings all KRb-specific stuff 
 
 ### Setting up
 
-At the start of any calculation, we need to do a little bit of setup, namely,
+Before doing the calculation, we need to do a little bit of setup: 
 construct the Hamiltonian and choose the external fields to use in the calculation:
 
 ```jldoctest bialkali
@@ -74,7 +74,7 @@ julia> spectrum = get_spectrum(parts, fields)
 ```
 
 The output is a [`DataFrame`](https://dataframes.juliadata.org/stable/).
-We can inspect its columns,
+We can inspect its columns:
 
 ```jldoctest bialkali
 julia> names(spectrum)
@@ -98,13 +98,12 @@ Descriptions of these fields can be found in the documentation for [`get_spectru
 
 ### Working with the output DataFrame
 
-We put the output of `get_spectrum` into a `DataFrame` because
-[`DataFrames.jl`](https://dataframes.juliadata.org/stable/) provides a nice API for manipulating all of the data that comes out.
-Even the simple calculation we just did, which only involves a single field
-and ``N \leq 5`` rotational states, gives a decent amount of data.
+[`DataFrames.jl`](https://dataframes.juliadata.org/stable/) provides a nice API for manipulating the data that comes out
+of [`get_spectrum`](@ref).
 
-`BialkaliSpectrum.jl` provides a few convenience methods for working with `DataFrame`s in the API docs at [ DataFrame helpers](@ref).
-Here, we'll demonstrate a few of them:
+`BialkaliSpectrum.jl` provides a few convenience methods for working with `DataFrame`s.
+Documentation of these methods can be found here: [DataFrame helpers](@ref).
+Let's try a few of them:
 
 ```jldoctest bialkali
 julia> filter_rotational(spectrum, 0, 0) # get only the N = 0, m_N = 0 states
@@ -186,23 +185,21 @@ julia> filter_basis_state(spectrum, KRbState(2, 2, -3, -1/2)) # get the states w
 
 ```
 
-These methods all copy the results into a new `DataFrame` to avoid mutating the
-original. Typically, you'll want to calculate the spectrum once initially with 
-all of the levels you need (including for the dipole moments, etc. to converge).
-Then, before further using the data, you can use these methods to filter the
-states you want into a new `DataFrame`.
+All of these methods copy the results into a new `DataFrame` to avoid mutating the
+original. Typically, you'll want to calculate the spectrum first with 
+all of the levels you need (including for the dipole moments, etc. to converge),
+then use these methods to filter the states you actually care about into a new `DataFrame`.
 
 !!! tip "Use DataFrames.jl"
 
     For more general transformations on `DataFrame`s, see the docs at
     [`DataFrames.jl`](https://dataframes.juliadata.org/stable/).
-    Here are a few methods from `DataFrames.jl` that I found especially useful
-    when writing `BialkaliSpectrum`:
+    Here are a few methods from `DataFrames.jl` that I've found especially useful:
 
     - [`filter`](https://dataframes.juliadata.org/stable/lib/functions/#Base.filter): 
-        retain only the rows that match some predicate.
+        keep only the rows that match some predicate.
     - [`select`](https://dataframes.juliadata.org/stable/lib/functions/#DataFrames.select): 
-        retain only some of the columns of the `DataFrame`.
+        keep only some of the columns of the `DataFrame`.
     - [`transform`](https://dataframes.juliadata.org/stable/lib/functions/#DataFrames.transform): 
         apply a function to the values in a column
     - [`sort`](https://dataframes.juliadata.org/stable/lib/functions/#Base.sort): 
@@ -220,8 +217,8 @@ states you want into a new `DataFrame`.
 ### Plotting the results
 
 Let's start off by using our calculated `spectrum` to plot the rotational transitions
-out of some state, say ``|0,0,-4,1/2\rangle``, which is the state we normally
-populate in KRb.
+out of some state.
+We'll use the state we normally populate in KRb, ``|0,0,-4,1/2\rangle``.
 
 If you're doing this in the REPL, as opposed to an Jupyter (IJulia) notebook,
 you'll need to add `ElectronDisplay.jl`,
@@ -242,14 +239,14 @@ After a while, a new window should appear with an image that looks like this:
 
 ![](basics_firstplot.png)
 
-These are the transitions coming out of our chosen state `KRbState(0, 0, -4, 1/2)`
+These are the transitions coming out of `KRbState(0, 0, -4, 1/2)`
 as a function of the transition frequency.
 The height of the lines is the strength of their transition dipole, 
 normalized to ``d_\text{perm} / \sqrt{3}``.
-All three polarizations, ``\pi``, ``\sigma^+`` and ``\sigma^-``, are shown.
+Transitions with all three polarizations, ``\pi``, ``\sigma^+`` and ``\sigma^-``, are shown.
 
 By default, [`plot_transition_strengths`](@ref) only plots transitions with a 
-relative strength (`cutoff`) greater than `1e-3`.
+relative strength (keyword arg `cutoff`) greater than `1e-3`.
 To plot all of the transitions with ``N' = N \pm 1``, pass `cutoff=nothing`,
 
 ```julia
@@ -315,6 +312,7 @@ julia> fields = generate_fields_scan(545.9, 0.0:1000.0:10000.0, [[]]);
 This produces a `Vector{ExternalFields}` with a constant magnetic field of
 545.9 G, a constant optical intensity of zero, and electric field strength
 increasing from 0 V/cm to 10 kV/cm in steps of 1 kV/cm.
+(This is a very coarse scan for the sake of this tutorial.)
 
 Next, we call [`get_spectra`](@ref) to calculate the spectrum at each field configuration,
 
@@ -348,8 +346,8 @@ Progress: 100%|█████████████████████�
 
 Notice that we passed a third parameter to [`get_spectra`](@ref), an anonymous function
 `df -> filter_rotational(df, [0, 1])`.
-The third argument of [`get_spectra`](@ref) is a closure that is evaluated on
-the spectrum obtained at each field configuration before adding it to the output
+The third argument of [`get_spectra`](@ref) is a closure that's evaluated on
+the spectrum obtained at each field configuration before it's appended to the output
 `DataFrame`.
 In this case, we just applied a filter that removes all of the rows from the output
 except those corresponding to states with ``N \leq 1``.
@@ -358,8 +356,8 @@ except those corresponding to states with ``N \leq 1``.
 
     For field scans containing hundreds of points and many rotational levels,
     the amount of rows stored in the `DataFrame` can quickly become very large.
-    In these cases, it can sometimes speed up the calculation quite a bit to
-    throw away the unneeded states as soon as possible, as shown in the previous
+    In these cases, it can sometimes speed up the calculation a bit to
+    throw away the unneeded states as soon as possible, as is done in this
     example.
 
 As an example, let's plot the energies as a function of the electric field:
