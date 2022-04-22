@@ -81,16 +81,16 @@ function plot_induced_dipole(
     spectra,
     hamiltonian_parts::HamiltonianParts;
     groupby=:E,
-    adiabatic=true
+    use_adiabatic=true
 )
     return plot_induced_dipole(
         induced_dipole_moments(spectra, hamiltonian_parts);
         groupby=groupby,
-        adiabatic=adiabatic
+        use_adiabatic=use_adiabatic
     )
 end
 
-function plot_induced_dipole(spectra; groupby=:fields, adiabatic=true)
+function plot_induced_dipole(spectra; groupby=:E, use_adiabatic=true)
     f = Figure(fontsize = 18)
 
     if groupby == :E
@@ -103,7 +103,7 @@ function plot_induced_dipole(spectra; groupby=:fields, adiabatic=true)
 
     ax = Axis(f[1, 1], xlabel=xlabel, ylabel="Induced dipole / permanent dipole")
 
-    if adiabatic
+    if use_adiabatic
         key = :adiabatic_index
     else
         key = :index
@@ -146,7 +146,7 @@ function plot_transition_dipole(
     initial_state::State,
     p::Int;
     groupby=:E,
-    adiabatic=true,
+    use_adiabatic=true,
 )
     return plot_transition_dipole(
         transitions(
@@ -160,7 +160,7 @@ function plot_transition_dipole(
         initial_state,
         p;
         groupby=groupby,
-        adiabatic=adiabatic
+        use_adiabatic=use_adiabatic
     )
 end
 
@@ -169,7 +169,7 @@ function plot_transition_dipole(
     initial_state::State,
     p::Int;
     groupby=:E,
-    adiabatic=adiabatic
+    use_adiabatic=true
 )
     f = Figure(fontsize = 18)
 
@@ -183,7 +183,7 @@ function plot_transition_dipole(
 
     ax = Axis(f[1, 1], xlabel=xlabel, ylabel="Transition dipole / permanent dipole")
 
-    if adiabatic
+    if use_adiabatic
         key = :adiabatic_index
     else
         key = :index
