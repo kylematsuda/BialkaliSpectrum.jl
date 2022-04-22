@@ -9,10 +9,10 @@ Pages = ["basics.md"]
 This package is not yet registered with the Julia package manager.
 
 From the REPL, do
-```julia
-julia> import Pkg
-
-julia> Pkg.add(url="https://github.com/kylematsuda/BialkaliSpectrum.jl")
+```@repl
+import Pkg
+Pkg.add(url="https://github.com/kylematsuda/BialkaliSpectrum.jl")
+nothing; # hide
 ```
 
 Now bring the package contents into scope:
@@ -223,21 +223,31 @@ We'll use the state we normally populate in KRb, ``|0,0,-4,1/2\rangle``.
 If you're doing this in the REPL, as opposed to an Jupyter (IJulia) notebook,
 you'll need to add `ElectronDisplay.jl`,
 
-```julia
-julia> using ElectronDisplay
+```@repl
+using ElectronDisplay
 ```
 
 Then, run the following line,
 
-```julia
-julia> plot_transition_strengths(spectrum, parts, KRbState(0, 0, -4, 1/2))
+```@setup plot
+using BialkaliSpectrum, BialkaliSpectrum.K40Rb87
+import CairoMakie
+
+parts = make_krb_hamiltonian_parts(5);
+fields = ExternalFields(545.9, 0.0, []);
+spectrum = get_spectrum(parts, fields);
+```
+
+```@repl plot
+plot_transition_strengths(spectrum, parts, KRbState(0, 0, -4, 1/2));
+CairoMakie.save("transition_strengths.svg", ans); nothing # hide
 ```
 
 This may be very slow on the first iteration, since Julia will need to compile
 `CairoMakie` if this is your first plot in the session.
 After a while, a new window should appear with an image that looks like this:
 
-![](basics_firstplot.png)
+![](transition_strengths.svg)
 
 These are the transitions coming out of `KRbState(0, 0, -4, 1/2)`
 as a function of the transition frequency.
@@ -249,38 +259,41 @@ By default, [`plot_transition_strengths`](@ref) only plots transitions with a
 relative strength (keyword arg `cutoff`) greater than `1e-3`.
 To plot all of the transitions with ``N' = N \pm 1``, pass `cutoff=nothing`,
 
-```julia
-julia> plot_transition_strengths(spectrum, parts, KRbState(0, 0, -4, 1/2); cutoff=nothing)
+```@repl plot
+plot_transition_strengths(spectrum, parts, KRbState(0, 0, -4, 1/2); cutoff=nothing);
+CairoMakie.save("transition_strengths_nocutoff.svg", ans); nothing # hide
 ```
 which gives a plot like this:
 
-![](basics_secondplot.png)
+![](transition_strengths_nocutoff.svg)
 
 Check out the docs for [`plot_transition_strengths`](@ref) for a full list of the
 allowed keyword arguments.
 
 What if we want to plot the transitions out of ``N = 1`` instead?
 
-```julia
-julia> plot_transition_strengths(spectrum, parts, KRbState(1, 0, -4, 1/2))
+```@repl plot
+plot_transition_strengths(spectrum, parts, KRbState(1, 0, -4, 1/2));
+CairoMakie.save("transitions_N=1.svg", ans); nothing # hide
 ```
 
 This produces a weird-looking plot:
 
-![](basics_thirdplot.png)
+![](transitions_N=1.svg)
 
 [`plot_transition_strengths`](@ref) plots transitions to both higher and lower states
 by default, so we are seeing transition to both the ``N = 0`` and ``N = 2`` manifolds.
 To make things clearer, we can supply the `frequency_range` parameter,
 which we have omitted so far. For example, if we want to plot the ``N = 2`` transitions,
 
-```julia
-julia> plot_transition_strengths(spectrum, parts, KRbState(1, 0, -4, 1/2), [4000, 5000])
+```@repl plot
+plot_transition_strengths(spectrum, parts, KRbState(1, 0, -4, 1/2), [4000, 5000]);
+CairoMakie.save("transitions_N=1_to0.svg", ans); nothing # hide
 ```
 
 This produces the following image:
 
-![](basics_fourthplot.png)
+![](transitions_N=1_to0.svg)
 
 
 !!! tip "hamiltonian_parts"
@@ -305,8 +318,8 @@ are changed.
 
 To do this, we will use a vector of `ExternalField`s instead of a single one,
 
-```jldoctest bialkali
-julia> fields = generate_fields_scan(545.9, 0.0:1000.0:10000.0, [[]]);
+```@repl plot
+fields = generate_fields_scan(545.9, 0.0:1000.0:10000.0, [[]]);
 ```
 
 This produces a `Vector{ExternalFields}` with a constant magnetic field of
@@ -316,32 +329,8 @@ increasing from 0 V/cm to 10 kV/cm in steps of 1 kV/cm.
 
 Next, we call [`get_spectra`](@ref) to calculate the spectrum at each field configuration,
 
-```julia
-julia> spectra = get_spectra(parts, fields, df -> filter_rotational(df, [0, 1]))
-
-Progress: 100%|█████████████████████████████████████████| Time: 0:00:06
-1584×13 DataFrame
-  Row │ fields                             index  energy       eigenstate      ⋯
-      │ External…                          Int64  Float64      SubArray…       ⋯
-──────┼─────────────────────────────────────────────────────────────────────────
-    1 │ ExternalFields(SphericalVector(5…      1    -1.6672    ComplexF64[3.97 ⋯
-    2 │ ExternalFields(SphericalVector(5…      2    -1.53563   ComplexF64[-8.1
-    3 │ ExternalFields(SphericalVector(5…      3    -1.40404   ComplexF64[4.08
-    4 │ ExternalFields(SphericalVector(5…      4    -1.27245   ComplexF64[-6.9
-    5 │ ExternalFields(SphericalVector(5…      5    -1.14086   ComplexF64[0.0- ⋯
-    6 │ ExternalFields(SphericalVector(5…      6    -1.00925   ComplexF64[0.0-
-    7 │ ExternalFields(SphericalVector(5…      7    -0.914827  ComplexF64[4.87
-    8 │ ExternalFields(SphericalVector(5…      8    -0.877637  ComplexF64[0.0-
-  ⋮   │                 ⋮                    ⋮         ⋮                       ⋱
- 1578 │ ExternalFields(SphericalVector(5…    138  2681.32      ComplexF64[2.41 ⋯
- 1579 │ ExternalFields(SphericalVector(5…    139  2681.38      ComplexF64[2.66
- 1580 │ ExternalFields(SphericalVector(5…    140  2681.45      ComplexF64[2.02
- 1581 │ ExternalFields(SphericalVector(5…    141  2681.59      ComplexF64[-6.3
- 1582 │ ExternalFields(SphericalVector(5…    142  2681.74      ComplexF64[6.12 ⋯
- 1583 │ ExternalFields(SphericalVector(5…    143  2681.89      ComplexF64[5.73
- 1584 │ ExternalFields(SphericalVector(5…    144  2682.04      ComplexF64[1.61
-                                                10 columns and 1569 rows omitted
-
+```@repl plot
+spectra = get_spectra(parts, fields, df -> filter_rotational(df, [0, 1]))
 ```
 
 Notice that we passed a third parameter to [`get_spectra`](@ref), an anonymous function
@@ -362,13 +351,14 @@ except those corresponding to states with ``N \leq 1``.
 
 As an example, let's plot the energies as a function of the electric field:
 
-```julia
-julia> plot_states_adiabatic(spectra; groupby=:E)
+```@repl plot
+plot_states_adiabatic(spectra; groupby=:E);
+CairoMakie.save("energies.svg", ans); nothing # hide
 ```
 
 The following plot should pop up on your screen:
 
-![](basics_fifthplot.png)
+![](energies.svg)
 
 The "fuzziness" of the lines is because there are 36 hyperfine states per rotational state,
 which all have the same Stark shift.
