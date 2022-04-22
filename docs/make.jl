@@ -27,7 +27,7 @@ makedocs(
             "Analyzing the results" => "api/analyzing_spectrum.md"
         ]
     ],
-    # strict = true
+    strict = true
 )
 
 deploydocs(

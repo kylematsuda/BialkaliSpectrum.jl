@@ -1,5 +1,7 @@
 [deps]
-HalfIntegers = "f0d1745a-41c9-11e9-1dd9-e5d34d218721"
 BialkaliSpectrum = "35893526-f1dd-48d2-8180-97f6707ed43b"
-WignerSymbols = "9f57e263-0b3d-5e2e-b1be-24f2bb48858b"
+CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+HalfIntegers = "f0d1745a-41c9-11e9-1dd9-e5d34d218721"
+WignerSymbols = "9f57e263-0b3d-5e2e-b1be-24f2bb48858b"
