@@ -419,13 +419,13 @@ function plot_transitions_adiabatic(
     f = Figure(
         fontsize = 14,
         font = "Helvetica",
-        resolution = (300, 450),
+        resolution = (500, 350),
     )
 
     ax = Axis(
         f[1,1],
         xlabel=xlabel,
-        ylabel="Energy (MHz)",
+        ylabel="Transition frequency (MHz)",
         backgroundcolor = :gray85,
     )
 
