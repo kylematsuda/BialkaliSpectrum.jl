@@ -4,10 +4,12 @@
         hamiltonian_parts::HamiltonianParts,
         ground_basis_state::State,
         frequency_range::Union{Vector,Nothing} = nothing;
+        groupby=:E,
         tol=0.5,
         restrict_N=true,
-        use_cutoff=true,
+        keep_negatives=true,
         cutoff::Union{Float64,Nothing}=1e-3,
+        normalization=1/sqrt(3)
     )
 
     plot_transition_strengths(
@@ -68,13 +70,11 @@ end
     plot_induced_dipole(
         spectra,
         hamiltonian_parts::HamiltonianParts;
-        groupby=:fields
+        groupby=:E,
+        use_adiabatic=true
     )
 
-    plot_induced_dipole(
-        spectra,
-        groupby=:fields
-    )
+    plot_induced_dipole(spectra; groupby=:E, use_adiabatic=true)
 
 """
 function plot_induced_dipole(
@@ -130,13 +130,16 @@ end
         hamiltonian_parts::HamiltonianParts,
         initial_state::State,
         p::Int;
-        groupby=:fields
+        groupby=:E,
+        use_adiabatic=true,
     )
 
     plot_transition_dipole(
         spectra,
-        p::Int,
-        groupby=:fields
+        initial_state::State,
+        p::Int;
+        groupby=:E,
+        use_adiabatic=true
     )
 
 """
