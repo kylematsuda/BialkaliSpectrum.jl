@@ -158,3 +158,11 @@ formatted = DataFrames.DataAPI.rightjoin(formatted, d_transition; on=:ϵ)
 ```
 
 Now that we have it in the right format, we can easily [save it to a CSV](https://dataframes.juliadata.org/stable/man/importing_and_exporting/).
+
+## Custom plotting with CairoMakie.jl
+
+Plan: Put a custom plot here using the contents of `formatted`.
+
+## Plotting shortcuts
+
+Plan: Show examples of the other signatures of the above plotting methods (the ones that take `hamiltonian_parts`).
