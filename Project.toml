@@ -1,0 +1,20 @@
+name = "BialkaliSpectrum"
+uuid = "35893526-f1dd-48d2-8180-97f6707ed43b"
+authors = ["kylematsuda <kyle.matsuda@colorado.edu>"]
+version = "0.1.0"
+
+[deps]
+BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
+CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
+ElectronDisplay = "d872a56f-244b-5cc9-b574-2017b5b909a8"
+HalfIntegers = "f0d1745a-41c9-11e9-1dd9-e5d34d218721"
+JuliaFormatter = "98e50ef6-434e-11e9-1051-2b60c6c9e899"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+ProgressMeter = "92933f4c-e287-5a05-a399-4b506db050ca"
+Revise = "295af30f-e4ad-537b-8983-00126c2a3abe"
+SparseArrays = "2f01184e-e22b-5df5-ae63-d93ebab69eaf"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+WignerSymbols = "9f57e263-0b3d-5e2e-b1be-24f2bb48858b"

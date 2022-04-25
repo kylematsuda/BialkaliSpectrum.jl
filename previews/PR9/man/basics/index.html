@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Getting started · BialkaliSpectrum.jl</title><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.044/juliamono.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.13.11/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><div class="docs-package-name"><span class="docs-autofit"><a href="../../">BialkaliSpectrum.jl</a></span></div><form class="docs-search" action="../../search/"><input class="docs-search-query" id="documenter-search-query" name="q" type="text" placeholder="Search docs"/></form><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><span class="tocitem">Guide</span><ul><li class="is-active"><a class="tocitem" href>Getting started</a><ul class="internal"><li><a class="tocitem" href="#Installation"><span>Installation</span></a></li><li><a class="tocitem" href="#First-calculation"><span>First calculation</span></a></li><li><a class="tocitem" href="#Scanning-the-external-fields"><span>Scanning the external fields</span></a></li></ul></li><li><a class="tocitem" href="../worked_example/">Example: dipole moments vs E</a></li></ul></li><li><span class="tocitem">API</span><ul><li><a class="tocitem" href="../../api/setting_up/">Setting up a calculation</a></li><li><a class="tocitem" href="../../api/analyzing_spectrum/">Analyzing the results</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">Guide</a></li><li class="is-active"><a href>Getting started</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Getting started</a></li></ul></nav><div class="docs-right"><a class="docs-edit-link" href="https://github.com/kylematsuda/BialkaliSpectrum.jl/blob/master/docs/src/man/basics.md" title="Edit on GitHub"><span class="docs-icon fab"></span><span class="docs-label is-hidden-touch">Edit on GitHub</span></a><a class="docs-settings-button fas fa-cog" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-sidebar-button fa fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a></div></header><article class="content" id="documenter-page"><h1 id="Getting-started"><a class="docs-heading-anchor" href="#Getting-started">Getting started</a><a id="Getting-started-1"></a><a class="docs-heading-anchor-permalink" href="#Getting-started" title="Permalink"></a></h1><ul><li><a href="#Getting-started">Getting started</a></li><li class="no-marker"><ul><li><a href="#Installation">Installation</a></li><li><a href="#First-calculation">First calculation</a></li><li><a href="#Scanning-the-external-fields">Scanning the external fields</a></li></ul></li></ul><h2 id="Installation"><a class="docs-heading-anchor" href="#Installation">Installation</a><a id="Installation-1"></a><a class="docs-heading-anchor-permalink" href="#Installation" title="Permalink"></a></h2><p>This package is not yet registered with the Julia package manager.</p><p>From the REPL, do</p><pre><code class="language-julia hljs">julia&gt; import Pkg
+
+julia&gt; Pkg.add(url=&quot;https://github.com/kylematsuda/BialkaliSpectrum.jl&quot;)</code></pre><p>Now bring the package contents into scope:</p><pre><code class="language-julia-repl hljs">julia&gt; using BialkaliSpectrum</code></pre><p>You can optionally also pull in molecule-specific definitions, which are kept in different submodules (<code>BialkaliSpectrum.K40Rb87</code>, <code>BialkaliSpectrum.Toy</code>, etc.):</p><pre><code class="language-julia-repl hljs">julia&gt; using BialkaliSpectrum.K40Rb87 # optional, brings all KRb-specific stuff into scope</code></pre><h2 id="First-calculation"><a class="docs-heading-anchor" href="#First-calculation">First calculation</a><a id="First-calculation-1"></a><a class="docs-heading-anchor-permalink" href="#First-calculation" title="Permalink"></a></h2><h3 id="Setting-up"><a class="docs-heading-anchor" href="#Setting-up">Setting up</a><a id="Setting-up-1"></a><a class="docs-heading-anchor-permalink" href="#Setting-up" title="Permalink"></a></h3><p>At the start of any calculation, we need to do a little bit of setup, namely, construct the Hamiltonian and choose the external fields to use in the calculation:</p><pre><code class="language-julia-repl hljs">julia&gt; parts = make_krb_hamiltonian_parts(5);
+
+julia&gt; fields = ExternalFields(545.9, 0.0, []) # B = 545.9 G, E = 0, no optical fields
+ExternalFields(SphericalVector(545.9, 0.0, 0.0), SphericalVector(0.0, 0.0, 0.0), SphericalVector[])</code></pre><h3 id="Finding-the-energy-levels"><a class="docs-heading-anchor" href="#Finding-the-energy-levels">Finding the energy levels</a><a id="Finding-the-energy-levels-1"></a><a class="docs-heading-anchor-permalink" href="#Finding-the-energy-levels" title="Permalink"></a></h3><p>Next, we call <a href="../../api/analyzing_spectrum/#BialkaliSpectrum.get_spectrum"><code>get_spectrum</code></a>, which diagonalizes the Hamiltonian (constructed from <code>parts</code>) at <code>fields</code>.</p><pre><code class="language-julia-repl hljs">julia&gt; spectrum = get_spectrum(parts, fields)
+1296×13 DataFrame
+  Row │ fields                             index  energy        eigenstate     ⋯
+      │ External…                          Int64  Float64       SubArray…      ⋯
+──────┼─────────────────────────────────────────────────────────────────────────
+    1 │ ExternalFields(SphericalVector(5…      1     -1.6672    ComplexF64[3.9 ⋯
+    2 │ ExternalFields(SphericalVector(5…      2     -1.53563   ComplexF64[-8.
+    3 │ ExternalFields(SphericalVector(5…      3     -1.40404   ComplexF64[4.0
+    4 │ ExternalFields(SphericalVector(5…      4     -1.27245   ComplexF64[-6.
+    5 │ ExternalFields(SphericalVector(5…      5     -1.14086   ComplexF64[0.0 ⋯
+    6 │ ExternalFields(SphericalVector(5…      6     -1.00925   ComplexF64[0.0
+    7 │ ExternalFields(SphericalVector(5…      7     -0.914827  ComplexF64[4.8
+    8 │ ExternalFields(SphericalVector(5…      8     -0.877637  ComplexF64[0.0
+  ⋮   │                 ⋮                    ⋮         ⋮                       ⋱
+ 1290 │ ExternalFields(SphericalVector(5…   1290  33420.2       ComplexF64[0.0 ⋯
+ 1291 │ ExternalFields(SphericalVector(5…   1291  33420.2       ComplexF64[2.5
+ 1292 │ ExternalFields(SphericalVector(5…   1292  33420.3       ComplexF64[0.0
+ 1293 │ ExternalFields(SphericalVector(5…   1293  33420.3       ComplexF64[0.0
+ 1294 │ ExternalFields(SphericalVector(5…   1294  33420.3       ComplexF64[0.0 ⋯
+ 1295 │ ExternalFields(SphericalVector(5…   1295  33420.3       ComplexF64[0.0
+ 1296 │ ExternalFields(SphericalVector(5…   1296  33420.4       ComplexF64[6.4
+                                                10 columns and 1281 rows omitted
+</code></pre><p>The output is a <a href="https://dataframes.juliadata.org/stable/"><code>DataFrame</code></a>. We can inspect its columns,</p><pre><code class="language-julia-repl hljs">julia&gt; names(spectrum)
+13-element Vector{String}:
+ &quot;fields&quot;
+ &quot;index&quot;
+ &quot;energy&quot;
+ &quot;eigenstate&quot;
+ &quot;basis_index&quot;
+ &quot;N&quot;
+ &quot;m_n&quot;
+ &quot;I_1&quot;
+ &quot;m_i1&quot;
+ &quot;I_2&quot;
+ &quot;m_i2&quot;
+ &quot;B&quot;
+ &quot;E&quot;</code></pre><p>Descriptions of these fields can be found in the documentation for <a href="../../api/analyzing_spectrum/#BialkaliSpectrum.get_spectrum"><code>get_spectrum</code></a>.</p><h3 id="Working-with-the-output-DataFrame"><a class="docs-heading-anchor" href="#Working-with-the-output-DataFrame">Working with the output DataFrame</a><a id="Working-with-the-output-DataFrame-1"></a><a class="docs-heading-anchor-permalink" href="#Working-with-the-output-DataFrame" title="Permalink"></a></h3><p>We put the output of <code>get_spectrum</code> into a <code>DataFrame</code> because <a href="https://dataframes.juliadata.org/stable/"><code>DataFrames.jl</code></a> provides a nice API for manipulating all of the data that comes out. Even the simple calculation we just did, which only involves a single field and <span>$N \leq 5$</span> rotational states, gives a decent amount of data.</p><p><code>BialkaliSpectrum.jl</code> provides a few convenience methods for working with <code>DataFrame</code>s in the API docs at <a href="../../api/analyzing_spectrum/#DataFrame-helpers"> DataFrame helpers</a>. Here, we&#39;ll demonstrate a few of them:</p><pre><code class="language-julia-repl hljs">julia&gt; filter_rotational(spectrum, 0, 0) # get only the N = 0, m_N = 0 states
+36×13 DataFrame
+ Row │ fields                             index  energy     eigenstate         ⋯
+     │ External…                          Int64  Float64    SubArray…          ⋯
+─────┼──────────────────────────────────────────────────────────────────────────
+   1 │ ExternalFields(SphericalVector(5…      1  -1.6672    ComplexF64[3.97483 ⋯
+   2 │ ExternalFields(SphericalVector(5…      2  -1.53563   ComplexF64[-8.1453
+   3 │ ExternalFields(SphericalVector(5…      3  -1.40404   ComplexF64[4.08372
+   4 │ ExternalFields(SphericalVector(5…      4  -1.27245   ComplexF64[-6.9833
+   5 │ ExternalFields(SphericalVector(5…      5  -1.14086   ComplexF64[0.0-0.0 ⋯
+   6 │ ExternalFields(SphericalVector(5…      6  -1.00925   ComplexF64[0.0-0.0
+   7 │ ExternalFields(SphericalVector(5…      7  -0.914827  ComplexF64[4.87699
+   8 │ ExternalFields(SphericalVector(5…      8  -0.877637  ComplexF64[0.0-0.0
+  ⋮  │                 ⋮                    ⋮        ⋮                      ⋮  ⋱
+  30 │ ExternalFields(SphericalVector(5…     30   0.92291   ComplexF64[0.0-0.0 ⋯
+  31 │ ExternalFields(SphericalVector(5…     31   1.00312   ComplexF64[1.6655e
+  32 │ ExternalFields(SphericalVector(5…     32   1.14082   ComplexF64[-4.7147
+  33 │ ExternalFields(SphericalVector(5…     33   1.27851   ComplexF64[-2.2568
+  34 │ ExternalFields(SphericalVector(5…     34   1.41619   ComplexF64[0.0-0.0 ⋯
+  35 │ ExternalFields(SphericalVector(5…     35   1.55387   ComplexF64[0.0-0.0
+  36 │ ExternalFields(SphericalVector(5…     36   1.69154   ComplexF64[0.0-0.0
+                                                  10 columns and 21 rows omitted
+
+julia&gt; filter_rotational(spectrum, [1, 2, 3]) # get everything in N = 1, 2, 3
+540×13 DataFrame
+ Row │ fields                             index  energy    eigenstate          ⋯
+     │ External…                          Int64  Float64   SubArray…           ⋯
+─────┼──────────────────────────────────────────────────────────────────────────
+   1 │ ExternalFields(SphericalVector(5…     37   2226.11  ComplexF64[0.0-0.0i ⋯
+   2 │ ExternalFields(SphericalVector(5…     38   2226.2   ComplexF64[0.0-0.0i
+   3 │ ExternalFields(SphericalVector(5…     39   2226.22  ComplexF64[0.0-0.0i
+   4 │ ExternalFields(SphericalVector(5…     40   2226.28  ComplexF64[0.0-0.0i
+   5 │ ExternalFields(SphericalVector(5…     41   2226.31  ComplexF64[0.0-0.0i ⋯
+   6 │ ExternalFields(SphericalVector(5…     42   2226.37  ComplexF64[0.0-0.0i
+   7 │ ExternalFields(SphericalVector(5…     43   2226.42  ComplexF64[0.0-0.0i
+   8 │ ExternalFields(SphericalVector(5…     44   2226.44  ComplexF64[0.0-0.0i
+  ⋮  │                 ⋮                    ⋮       ⋮                      ⋮   ⋱
+ 534 │ ExternalFields(SphericalVector(5…    570  13369.1   ComplexF64[0.0-0.0i ⋯
+ 535 │ ExternalFields(SphericalVector(5…    571  13369.1   ComplexF64[0.0-0.0i
+ 536 │ ExternalFields(SphericalVector(5…    572  13369.1   ComplexF64[0.0-0.0i
+ 537 │ ExternalFields(SphericalVector(5…    573  13369.1   ComplexF64[0.0-0.0i
+ 538 │ ExternalFields(SphericalVector(5…    574  13369.2   ComplexF64[0.0-0.0i ⋯
+ 539 │ ExternalFields(SphericalVector(5…    575  13369.2   ComplexF64[0.0-0.0i
+ 540 │ ExternalFields(SphericalVector(5…    576  13369.2   ComplexF64[0.0-0.0i
+                                                 10 columns and 525 rows omitted
+
+julia&gt; filter_hyperfine(spectrum, -4, [1/2, 3/2]) # get m_K = -4, m_Rb = 1/2 or 3/2 states
+72×13 DataFrame
+ Row │ fields                             index  energy        eigenstate      ⋯
+     │ External…                          Int64  Float64       SubArray…       ⋯
+─────┼──────────────────────────────────────────────────────────────────────────
+   1 │ ExternalFields(SphericalVector(5…      1     -1.6672    ComplexF64[3.97 ⋯
+   2 │ ExternalFields(SphericalVector(5…      7     -0.914827  ComplexF64[4.87
+   3 │ ExternalFields(SphericalVector(5…     37   2226.11      ComplexF64[0.0-
+   4 │ ExternalFields(SphericalVector(5…     39   2226.22      ComplexF64[0.0-
+   5 │ ExternalFields(SphericalVector(5…     40   2226.28      ComplexF64[0.0- ⋯
+   6 │ ExternalFields(SphericalVector(5…     54   2226.87      ComplexF64[0.0-
+   7 │ ExternalFields(SphericalVector(5…     56   2226.92      ComplexF64[0.0-
+   8 │ ExternalFields(SphericalVector(5…     66   2227.19      ComplexF64[0.0-
+  ⋮  │                 ⋮                    ⋮         ⋮                        ⋱
+  66 │ ExternalFields(SphericalVector(5…    976  33417.6       ComplexF64[1.27 ⋯
+  67 │ ExternalFields(SphericalVector(5…    979  33417.7       ComplexF64[-1.5
+  68 │ ExternalFields(SphericalVector(5…    983  33417.7       ComplexF64[-1.1
+  69 │ ExternalFields(SphericalVector(5…    984  33417.7       ComplexF64[1.47
+  70 │ ExternalFields(SphericalVector(5…    988  33417.7       ComplexF64[3.47 ⋯
+  71 │ ExternalFields(SphericalVector(5…    992  33417.7       ComplexF64[9.27
+  72 │ ExternalFields(SphericalVector(5…    993  33417.7       ComplexF64[1.16
+                                                  10 columns and 57 rows omitted
+
+julia&gt; filter_basis_state(spectrum, KRbState(2, 2, -3, -1/2)) # get the states whose nearest basis state is |2, 2, -3, 1/2&gt;
+1×13 DataFrame
+ Row │ fields                             index  energy   eigenstate           ⋯
+     │ External…                          Int64  Float64  SubArray…            ⋯
+─────┼──────────────────────────────────────────────────────────────────────────
+   1 │ ExternalFields(SphericalVector(5…    225  6683.58  ComplexF64[-5.56021e ⋯
+                                                              10 columns omitted
+</code></pre><p>These methods all copy the results into a new <code>DataFrame</code> to avoid mutating the original. Typically, you&#39;ll want to calculate the spectrum once initially with  all of the levels you need (including for the dipole moments, etc. to converge). Then, before further using the data, you can use these methods to filter the states you want into a new <code>DataFrame</code>.</p><div class="admonition is-success"><header class="admonition-header">Use DataFrames.jl</header><div class="admonition-body"><p>For more general transformations on <code>DataFrame</code>s, see the docs at <a href="https://dataframes.juliadata.org/stable/"><code>DataFrames.jl</code></a>. Here are a few methods from <code>DataFrames.jl</code> that I found especially useful when writing <code>BialkaliSpectrum</code>:</p><ul><li><a href="https://dataframes.juliadata.org/stable/lib/functions/#Base.filter"><code>filter</code></a>:    retain only the rows that match some predicate.</li><li><a href="https://dataframes.juliadata.org/stable/lib/functions/#DataFrames.select"><code>select</code></a>:    retain only some of the columns of the <code>DataFrame</code>.</li><li><a href="https://dataframes.juliadata.org/stable/lib/functions/#DataFrames.transform"><code>transform</code></a>:    apply a function to the values in a column</li><li><a href="https://dataframes.juliadata.org/stable/lib/functions/#Base.sort"><code>sort</code></a>:    sort the rows according to the value of some column</li><li><a href="https://dataframes.juliadata.org/stable/lib/functions/#DataFrames.groupby"><code>groupby</code></a>:    group the rows according to the value of some column.   This is especially useful when working with a big <code>DataFrame</code> that&#39;s the   aggregate of several spectra at different fields, and you want to split it   back up into the individual spectrum at each field.</li></ul><p>I&#39;ve only listed the non-mutating versions, but all of these (except <code>groupby</code>) have  a mutating version (e.g., <code>filter!</code>, <code>select!</code>, etc.) that may be more efficient when working with large <code>DataFrame</code>s, since you can avoid copying the entire <code>DataFrame</code>.</p></div></div><h3 id="Plotting-the-results"><a class="docs-heading-anchor" href="#Plotting-the-results">Plotting the results</a><a id="Plotting-the-results-1"></a><a class="docs-heading-anchor-permalink" href="#Plotting-the-results" title="Permalink"></a></h3><p>Let&#39;s start off by using our calculated <code>spectrum</code> to plot the rotational transitions out of some state, say <span>$|0,0,-4,1/2\rangle$</span>, which is the state we normally populate in KRb.</p><p>If you&#39;re doing this in the REPL, as opposed to an Jupyter (IJulia) notebook, you&#39;ll need to add <code>ElectronDisplay.jl</code>,</p><pre><code class="language-julia hljs">julia&gt; using ElectronDisplay</code></pre><p>Then, run the following line,</p><pre><code class="language-julia hljs">julia&gt; plot_transition_strengths(spectrum, parts, KRbState(0, 0, -4, 1/2))</code></pre><p>This may be very slow on the first iteration, since Julia will need to compile <code>CairoMakie</code> if this is your first plot in the session. After a while, a new window should appear with an image that looks like this:</p><p><img src="../basics_firstplot.png" alt/></p><p>These are the transitions coming out of our chosen state <code>KRbState(0, 0, -4, 1/2)</code> as a function of the transition frequency. The height of the lines is the strength of their transition dipole,  normalized to <span>$d_\text{perm} / \sqrt{3}$</span>. All three polarizations, <span>$\pi$</span>, <span>$\sigma^+$</span> and <span>$\sigma^-$</span>, are shown.</p><p>By default, <a href="../../api/analyzing_spectrum/#BialkaliSpectrum.plot_transition_strengths"><code>plot_transition_strengths</code></a> only plots transitions with a  relative strength (<code>cutoff</code>) greater than <code>1e-3</code>. To plot all of the transitions with <span>$N&#39; = N \pm 1$</span>, pass <code>cutoff=nothing</code>,</p><pre><code class="language-julia hljs">julia&gt; plot_transition_strengths(spectrum, parts, KRbState(0, 0, -4, 1/2); cutoff=nothing)</code></pre><p>which gives a plot like this:</p><p><img src="../basics_secondplot.png" alt/></p><p>Check out the docs for <a href="../../api/analyzing_spectrum/#BialkaliSpectrum.plot_transition_strengths"><code>plot_transition_strengths</code></a> for a full list of the allowed keyword arguments.</p><p>What if we want to plot the transitions out of <span>$N = 1$</span> instead?</p><pre><code class="language-julia hljs">julia&gt; plot_transition_strengths(spectrum, parts, KRbState(1, 0, -4, 1/2))</code></pre><p>This produces a weird-looking plot:</p><p><img src="../basics_thirdplot.png" alt/></p><p><a href="../../api/analyzing_spectrum/#BialkaliSpectrum.plot_transition_strengths"><code>plot_transition_strengths</code></a> plots transitions to both higher and lower states by default, so we are seeing transition to both the <span>$N = 0$</span> and <span>$N = 2$</span> manifolds. To make things clearer, we can supply the <code>frequency_range</code> parameter, which we have omitted so far. For example, if we want to plot the <span>$N = 2$</span> transitions,</p><pre><code class="language-julia hljs">julia&gt; plot_transition_strengths(spectrum, parts, KRbState(1, 0, -4, 1/2), [4000, 5000])</code></pre><p>This produces the following image:</p><p><img src="../basics_fourthplot.png" alt/></p><div class="admonition is-success"><header class="admonition-header">hamiltonian_parts</header><div class="admonition-body"><p>Note that <a href="../../api/analyzing_spectrum/#BialkaliSpectrum.plot_transition_strengths"><code>plot_transition_strengths</code></a> takes <code>parts</code> as a parameter  (written as <code>hamiltonian_parts</code> in the function signature). This is a common requirement for many of the analysis functions – in this case, the method needs the dipole matrix elements contained within <code>parts</code>  to calculate the transition strengths.</p><p>There is another signature of <a href="../../api/analyzing_spectrum/#BialkaliSpectrum.plot_transition_strengths"><code>plot_transition_strengths</code></a> that doesn&#39;t take <code>hamiltonian_parts</code> as an argument. This variant assumes that you are passing in a <code>DataFrame</code> with the requisite fields already defined (coming from e.g., the output of <a href="../../api/analyzing_spectrum/#BialkaliSpectrum.transitions"><code>transitions</code></a>).</p></div></div><h2 id="Scanning-the-external-fields"><a class="docs-heading-anchor" href="#Scanning-the-external-fields">Scanning the external fields</a><a id="Scanning-the-external-fields-1"></a><a class="docs-heading-anchor-permalink" href="#Scanning-the-external-fields" title="Permalink"></a></h2><p>So far, we have shown a few examples of what we can do with the spectrum calculated for some particular value of the external fields. But we often want to calculate some property of the molecules as the external fields are changed.</p><p>To do this, we will use a vector of <code>ExternalField</code>s instead of a single one,</p><pre><code class="language-julia-repl hljs">julia&gt; fields = generate_fields_scan(545.9, 0.0:1000.0:10000.0, [[]]);</code></pre><p>This produces a <code>Vector{ExternalFields}</code> with a constant magnetic field of 545.9 G, a constant optical intensity of zero, and electric field strength increasing from 0 V/cm to 10 kV/cm in steps of 1 kV/cm.</p><p>Next, we call <a href="../../api/analyzing_spectrum/#BialkaliSpectrum.get_spectra"><code>get_spectra</code></a> to calculate the spectrum at each field configuration,</p><pre><code class="language-julia hljs">julia&gt; spectra = get_spectra(parts, fields, df -&gt; filter_rotational(df, [0, 1]))
+
+Progress: 100%|█████████████████████████████████████████| Time: 0:00:06
+1584×13 DataFrame
+  Row │ fields                             index  energy       eigenstate      ⋯
+      │ External…                          Int64  Float64      SubArray…       ⋯
+──────┼─────────────────────────────────────────────────────────────────────────
+    1 │ ExternalFields(SphericalVector(5…      1    -1.6672    ComplexF64[3.97 ⋯
+    2 │ ExternalFields(SphericalVector(5…      2    -1.53563   ComplexF64[-8.1
+    3 │ ExternalFields(SphericalVector(5…      3    -1.40404   ComplexF64[4.08
+    4 │ ExternalFields(SphericalVector(5…      4    -1.27245   ComplexF64[-6.9
+    5 │ ExternalFields(SphericalVector(5…      5    -1.14086   ComplexF64[0.0- ⋯
+    6 │ ExternalFields(SphericalVector(5…      6    -1.00925   ComplexF64[0.0-
+    7 │ ExternalFields(SphericalVector(5…      7    -0.914827  ComplexF64[4.87
+    8 │ ExternalFields(SphericalVector(5…      8    -0.877637  ComplexF64[0.0-
+  ⋮   │                 ⋮                    ⋮         ⋮                       ⋱
+ 1578 │ ExternalFields(SphericalVector(5…    138  2681.32      ComplexF64[2.41 ⋯
+ 1579 │ ExternalFields(SphericalVector(5…    139  2681.38      ComplexF64[2.66
+ 1580 │ ExternalFields(SphericalVector(5…    140  2681.45      ComplexF64[2.02
+ 1581 │ ExternalFields(SphericalVector(5…    141  2681.59      ComplexF64[-6.3
+ 1582 │ ExternalFields(SphericalVector(5…    142  2681.74      ComplexF64[6.12 ⋯
+ 1583 │ ExternalFields(SphericalVector(5…    143  2681.89      ComplexF64[5.73
+ 1584 │ ExternalFields(SphericalVector(5…    144  2682.04      ComplexF64[1.61
+                                                10 columns and 1569 rows omitted
+</code></pre><p>Notice that we passed a third parameter to <a href="../../api/analyzing_spectrum/#BialkaliSpectrum.get_spectra"><code>get_spectra</code></a>, an anonymous function <code>df -&gt; filter_rotational(df, [0, 1])</code>. The third argument of <a href="../../api/analyzing_spectrum/#BialkaliSpectrum.get_spectra"><code>get_spectra</code></a> is a closure that is evaluated on the spectrum obtained at each field configuration before adding it to the output <code>DataFrame</code>. In this case, we just applied a filter that removes all of the rows from the output except those corresponding to states with <span>$N \leq 1$</span>.</p><div class="admonition is-success"><header class="admonition-header">Removing unneeded states</header><div class="admonition-body"><p>For field scans containing hundreds of points and many rotational levels, the amount of rows stored in the <code>DataFrame</code> can quickly become very large. In these cases, it can sometimes speed up the calculation quite a bit to throw away the unneeded states as soon as possible, as shown in the previous example.</p></div></div><p>As an example, let&#39;s plot the energies as a function of the electric field:</p><pre><code class="language-julia hljs">julia&gt; plot_states_adiabatic(spectra; groupby=:E)</code></pre><p>The following plot should pop up on your screen:</p><p><img src="../basics_fifthplot.png" alt/></p><p>The &quot;fuzziness&quot; of the lines is because there are 36 hyperfine states per rotational state, which all have the same Stark shift.</p><p>Hopefully this is enough to get started! See the <a href="../../#Public-API">Public API</a> docs for more details. We&#39;ll add a more complete example calculation at some point here: <a href="../worked_example/#Example:-dipole-moments-vs-E">Example: dipole moments vs E</a>.</p></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../">« Home</a><a class="docs-footer-nextpage" href="../worked_example/">Example: dipole moments vs E »</a><div class="flexbox-break"></div><p class="footer-message">Powered by <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> and the <a href="https://julialang.org/">Julia Programming Language</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 0.27.16 on <span class="colophon-date" title="Thursday 21 April 2022 23:22">Thursday 21 April 2022</span>. Using Julia version 1.6.6.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
