@@ -156,6 +156,53 @@ end
     end
 end
 
+@testset "No dependence of energies under rotation of all fields" begin
+    B = 545.9
+    E = 0. 
+    Ilaser = 2000.
+    
+    # Here is the baseline: all fields oriented vertically
+    fields_0 = ExternalFields(B, E, [VectorZ(Ilaser)])
+    spectrum_0 = filter_rotational(
+        get_spectrum(parts_neyenhuis, fields_0),
+        [0, 1, 2, 3]
+    );
+    
+    fields(θ, ϕ) = ExternalFields(
+        SphericalVector(B, θ, ϕ),
+        SphericalVector(E, θ, ϕ),
+        [SphericalVector(Ilaser, θ, ϕ)]
+    )
+     
+    spectra_theta = get_spectra(
+        parts_neyenhuis,
+        [fields(θ * π / 180, 0.0) for θ=0:5:180],
+        df -> filter_rotational(df, [0, 1, 2, 3])
+    );
+
+    θ_0 = π / 4
+    spectra_phi = get_spectra(
+        parts_neyenhuis,
+        [fields(θ_0, ϕ * π / 180) for ϕ=0:5:180],
+        df -> filter_rotational(df, [0, 1, 2, 3])
+    );
+    
+    tol = 1e-9 # in MHz
+    compare((e1, e2)) = abs(e1 - e2) < tol
+    
+    test_func(grouped) = [
+        all(map(compare,
+            zip(spectrum_0.energy, grouped[i].energy))) 
+            for i=1:length(grouped)
+    ] |> all
+
+    grouped_theta = groupby(spectra_theta, :fields)
+    @test test_func(grouped_theta)
+
+    grouped_phi = groupby(spectra_phi, :fields)
+    @test test_func(grouped_phi)
+end
+
 # @testset "Transition strengths without hyperfine couplings" begin
 #     parts = make_hamiltonian_parts(TOY_MOLECULE_PARAMETERS, N_max)
 #     B = TOY_MOLECULE_PARAMETERS.Bᵣ
