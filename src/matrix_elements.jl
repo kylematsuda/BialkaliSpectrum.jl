@@ -199,12 +199,12 @@ function tensor_polarizability(p::Int, bra::State, ket::State)
     N, mₙ = bra.N, bra.mₙ
     mₙ′ = ket.mₙ
 
-    if deltas && (N > 0) && (mₙ′ - mₙ - p == 0)
+    if deltas && (N > 0) && (mₙ′ - mₙ + p == 0)
         return sqrt(6) *
                (-1)^(mₙ) *
                (2 * N + 1) *
                WignerJ2J(N, 0) *
-               wigner3j(N, 2, N, -mₙ, -p, mₙ′)
+               wigner3j(N, 2, N, -mₙ, p, mₙ′)
     else
         return 0
     end
