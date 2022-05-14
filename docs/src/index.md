@@ -4,6 +4,9 @@ Calculate the energy levels of diatomic
 $${}^{1} \Sigma^+$$
 molecules in magnetic, electric, and optical fields.
 
+Example calculation: ${}^{40}\text{K}^{87}\text{Rb}$ transitions from a particular hyperfine state as a function of electric field. 
+![](krb_transitions_vs_E_bypol.png)
+
 ## Manual
 ```@contents
 Pages = ["man/basics.md",
